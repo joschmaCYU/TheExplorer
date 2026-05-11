@@ -94,7 +94,6 @@ public class Explorer extends Application {
               break; // Suivant
             case ENTER:
               menu.executeAction();
-              primaryStage.hide();
               break;
             case ESCAPE:
               primaryStage.hide();
