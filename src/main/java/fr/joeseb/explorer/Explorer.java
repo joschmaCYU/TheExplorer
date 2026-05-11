@@ -34,7 +34,9 @@ public class Explorer extends Application {
             "Téléchargements",
             "Bureau",
             "Corbeille",
-            "Test1");
+            "Test1",
+            "Test2",
+            "Test3");
 
     // 3. Création du menu radial
     menu = new RadialMenu(mesDossiers);
@@ -88,8 +90,8 @@ public class Explorer extends Application {
               break;
             case DIGIT9:
             case NUMPAD9:
-              menu.highlightSlice(8);
-              break;
+              menu.highlightSlice(-3);
+              break; // Suivant
             case ENTER:
               menu.executeAction();
               primaryStage.hide();
