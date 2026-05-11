@@ -33,7 +33,8 @@ public class Explorer extends Application {
             "Musique",
             "Téléchargements",
             "Bureau",
-            "Corbeille");
+            "Corbeille",
+            "Test1");
 
     // 3. Création du menu radial
     menu = new RadialMenu(mesDossiers);
@@ -49,29 +50,45 @@ public class Explorer extends Application {
     scene.setOnKeyPressed(
         event -> {
           switch (event.getCode()) {
-            case NUMPAD6:
+            case DIGIT0:
+            case NUMPAD0:
+              menu.highlightSlice(-1);
+              break; // Retour
+            case DIGIT1:
+            case NUMPAD1:
               menu.highlightSlice(0);
-              break; // Droite
-            case NUMPAD3:
+              break;
+            case DIGIT2:
+            case NUMPAD2:
               menu.highlightSlice(1);
               break;
-            case NUMPAD2:
+            case DIGIT3:
+            case NUMPAD3:
               menu.highlightSlice(2);
-              break; // Bas
-            case NUMPAD1:
+              break;
+            case DIGIT4:
+            case NUMPAD4:
               menu.highlightSlice(3);
               break;
-            case NUMPAD4:
+            case DIGIT5:
+            case NUMPAD5:
               menu.highlightSlice(4);
-              break; // Gauche
-            case NUMPAD7:
+              break;
+            case DIGIT6:
+            case NUMPAD6:
               menu.highlightSlice(5);
               break;
-            case NUMPAD8:
+            case DIGIT7:
+            case NUMPAD7:
               menu.highlightSlice(6);
-              break; // Haut
-            case NUMPAD9:
+              break;
+            case DIGIT8:
+            case NUMPAD8:
               menu.highlightSlice(7);
+              break;
+            case DIGIT9:
+            case NUMPAD9:
+              menu.highlightSlice(8);
               break;
             case ENTER:
               menu.executeAction();
