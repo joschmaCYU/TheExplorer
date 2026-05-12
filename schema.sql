@@ -1,18 +1,9 @@
--- ============================================================
--- 1. NETTOYAGE DE LA BASE (Pour pouvoir relancer le script)
--- ============================================================
 DROP TABLE IF EXISTS Corbeille, Historique, Element_Tag, Membre_Groupe, Dossier, Fichier, Element, Tag, Application, Groupe, Utilisateur CASCADE;
 DROP TYPE IF EXISTS enum_role, enum_action CASCADE;
 
--- ============================================================
--- 2. PARTIE DDL (Création des structures)
--- ============================================================
-
--- Création des types énumérés
 CREATE TYPE enum_role AS ENUM ('Admin', 'Membre', 'Lecteur');
 CREATE TYPE enum_action AS ENUM ('Création', 'Modification', 'Suppression');
 
--- Tables principales
 CREATE TABLE Utilisateur (
     id_user VARCHAR PRIMARY KEY,
     nom VARCHAR(50) NOT NULL,
@@ -41,7 +32,6 @@ CREATE TABLE Tag (
     icone_tag VARCHAR(50) NOT NULL
 );
 
--- Table mère Element
 CREATE TABLE Element (
     id_element VARCHAR PRIMARY KEY,
     nom_element VARCHAR(255) NOT NULL,
@@ -84,7 +74,6 @@ CREATE TABLE Element_Tag (
     PRIMARY KEY (id_element, id_tag)
 );
 
--- Tables de suivi
 CREATE TABLE Historique (
     id_historique VARCHAR PRIMARY KEY,
     type_action enum_action NOT NULL,
@@ -100,57 +89,44 @@ CREATE TABLE Corbeille (
     id_element VARCHAR REFERENCES Element(id_element) UNIQUE NOT NULL
 );
 
--- ============================================================
--- 3. PARTIE DML (Jeu de données de test)
--- ============================================================
-
--- Insertion Utilisateurs
 INSERT INTO Utilisateur (id_user, nom, prenom, mail, date_creation) VALUES 
 ('U01', 'Massé', 'Jean', 'jean@gmail.com', '2020-01-12'),
 ('U02', 'Dupont', 'Alice', 'alice@cyu.fr', '2024-09-01');
 
--- Insertion Groupes
 INSERT INTO Groupe (id_groupe, nom_groupe, description, date_creation) VALUES 
 ('G01', 'Projet SAÉ', 'Groupe de travail pour la base de données', '2025-03-26'),
 ('G02', 'Design Team', 'Ressources graphiques', '2025-04-01');
 
--- Insertion Membre_Groupe
 INSERT INTO Membre_Groupe (id_user, id_groupe, role_user, date_rejoint) VALUES 
 ('U01', 'G01', 'Admin', '2025-03-26'),
 ('U02', 'G01', 'Membre', '2025-03-27');
 
--- Insertion Applications
 INSERT INTO Application (id_app, nom_app, chemin_exec, version_app) VALUES 
 ('APP1', 'Visionneuse', 'C:\Program Files\Images\vis.exe', 'v1.2'),
 ('APP2', 'VLC Player', 'C:\Program Files\VLC\vlc.exe', 'v3.0.20'),
 ('APP3', 'VS Code', 'C:\Program Files\Microsoft VS Code\code.exe', 'v1.88');
 
--- Insertion Tags
 INSERT INTO Tag (id_tag, nom_tag, icone_tag) VALUES 
 ('T01', 'Urgent', 'warning.png'),
 ('T02', 'Brouillon', 'draft.png');
 
--- Insertion Dossiers (Hérite de Element)
 INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_proprietaire, id_parent) VALUES 
 ('E01', 'Racine_Jean', 'Dossier', '/home/jean', 'U01', NULL),
 ('E02', 'Vidéos_SAE', 'Dossier', '/home/jean/videos', 'U01', 'E01'),
 ('E03', 'logo.png', 'Fichier', '/home/jean', 'U01', 'E01'),
 ('E04', 'demo.mp4', 'Fichier', '/home/jean/videos', 'U01', 'E02');
 
--- 2. On précise lesquels sont des Dossiers
 INSERT INTO Dossier (id_element, icone, nb_elements) VALUES 
 ('E01', 'folder_home.png', 2),
 ('E02', 'folder_video.png', 1);
 
--- 3. On précise lesquels sont des Fichiers
 INSERT INTO Fichier (id_element, taille_octets, extension, open_with_app, icone) VALUES 
 ('E03', 102450, 'png', 'APP1', 'file_image.png'),
 ('E04', 15480000, 'mp4', 'APP2', 'file_video.png');
 
--- Maintenant, on peut ajouter le Tag sans erreur !
 INSERT INTO Element_Tag (id_element, id_tag) VALUES 
 ('E04', 'T01');
--- Insertion Historique
+
 INSERT INTO Historique (id_historique, type_action, date_action, id_element, id_user) VALUES 
 ('H01', 'Création', '2026-05-10', 'E03', 'U01'),
 ('H02', 'Création', '2026-05-11', 'E04', 'U01');
