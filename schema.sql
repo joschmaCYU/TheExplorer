@@ -131,4 +131,3 @@ INSERT INTO Historique (id_historique, type_action, date_action, id_element, id_
 ('H01', 'Création', '2026-05-10', 'E03', 'U01'),
 ('H02', 'Création', '2026-05-11', 'E04', 'U01');
 
---bonjuir le man
