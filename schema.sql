@@ -130,3 +130,5 @@ INSERT INTO Element_Tag (id_element, id_tag) VALUES
 INSERT INTO Historique (id_historique, type_action, date_action, id_element, id_user) VALUES 
 ('H01', 'Création', '2026-05-10', 'E03', 'U01'),
 ('H02', 'Création', '2026-05-11', 'E04', 'U01');
+
+--bonjuir le man
