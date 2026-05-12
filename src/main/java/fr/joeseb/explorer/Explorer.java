@@ -2,6 +2,9 @@ package fr.joeseb.explorer;
 
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
@@ -20,23 +23,12 @@ public class Explorer extends Application {
 
   @Override
   public void start(Stage primaryStage) {
-    // 1. Initialisation silencieuse de la base de données
+    // 1. Initialisation silencieuse de la base de données et des données de base
     Database.getConnection();
+    DatabaseInitializer.initialize();
 
-    // 2. Création de la liste des dossiers (Exemple pour 8 directions)
-    List<String> mesDossiers =
-        Arrays.asList(
-            "Images",
-            "Vidéos",
-            "Projets",
-            "Documents",
-            "Musique",
-            "Téléchargements",
-            "Bureau",
-            "Corbeille",
-            "Test1",
-            "Test2",
-            "Test3");
+    // 2. Récupération des dossiers depuis la base de données
+    List<String> mesDossiers = fetchFoldersFromDb();
 
     // 3. Création du menu radial
     menu = new RadialMenu(mesDossiers);
@@ -126,6 +118,24 @@ public class Explorer extends Application {
     } catch (NativeHookException ex) {
       System.err.println("Impossible d'activer le raccourci global : " + ex.getMessage());
     }
+  }
+
+  private List<String> fetchFoldersFromDb() {
+    List<String> folders = new ArrayList<>();
+    String sql =
+        "SELECT nom_element FROM Element WHERE type_element = 'DOSSIER' AND id_parent IS NULL ORDER"
+            + " BY date_creation";
+    try (Statement stmt = Database.getConnection().createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      while (rs.next()) {
+        folders.add(rs.getString("nom_element"));
+      }
+    } catch (Exception e) {
+      System.err.println("Erreur lors de la récupération des dossiers : " + e.getMessage());
+      // Fallback au cas où
+      folders.addAll(Arrays.asList("Images", "Vidéos", "Documents", "Bureau"));
+    }
+    return folders;
   }
 
   public static void main(String[] args) {
