@@ -2,11 +2,12 @@ package fr.joeseb.explorer;
 
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
+import java.io.File;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -20,6 +21,8 @@ import javafx.stage.StageStyle;
 public class Explorer extends Application {
 
   private RadialMenu menu;
+  private final Stack<String> parentStack = new Stack<>();
+  private String currentParentId = null;
 
   @Override
   public void start(Stage primaryStage) {
@@ -27,11 +30,27 @@ public class Explorer extends Application {
     Database.getConnection();
     DatabaseInitializer.initialize();
 
-    // 2. Récupération des dossiers depuis la base de données
-    List<String> mesDossiers = fetchFoldersFromDb();
+    // 2. Récupération des dossiers racine
+    List<ExplorerElement> elements = fetchElementsFromDb(null);
 
     // 3. Création du menu radial
-    menu = new RadialMenu(mesDossiers);
+    menu = new RadialMenu(elements);
+    menu.setOnElementSelectedListener(
+        new RadialMenu.OnElementSelectedListener() {
+          @Override
+          public void onElementSelected(ExplorerElement element) {
+            if ("Dossier".equals(element.getType())) {
+              navigateTo(element.getId());
+            } else {
+              openFile(element);
+            }
+          }
+
+          @Override
+          public void onBackSelected() {
+            navigateBack();
+          }
+        });
 
     // 4. Configuration de l'interface (Transparence totale)
     StackPane root = new StackPane(menu);
@@ -40,14 +59,10 @@ public class Explorer extends Application {
     Scene scene = new Scene(root, 400, 400);
     scene.setFill(Color.TRANSPARENT);
 
-    // --- GESTION DU PAVÉ NUMÉRIQUE ---
+    // Gestion des touches (1-8 pour les parts, 0 pour retour, 9 pour suivant, Enter pour valider)
     scene.setOnKeyPressed(
         event -> {
           switch (event.getCode()) {
-            case DIGIT0:
-            case NUMPAD0:
-              menu.highlightSlice(-1);
-              break; // Retour
             case DIGIT1:
             case NUMPAD1:
               menu.highlightSlice(0);
@@ -84,6 +99,10 @@ public class Explorer extends Application {
             case NUMPAD9:
               menu.highlightSlice(-3);
               break; // Suivant
+            case DIGIT0:
+            case NUMPAD0:
+              menu.highlightSlice(-1);
+              break; // Retour
             case ENTER:
               menu.executeAction();
               break;
@@ -107,35 +126,89 @@ public class Explorer extends Application {
     System.out.println("Explorateur prêt. Appuyez sur ESPACE pour afficher la roue.");
   }
 
-  private void setupGlobalShortcut(Stage stage) {
-    // Désactive les logs inutiles de JNativeHook dans la console
-    Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-    logger.setLevel(Level.OFF);
-
+  private void openFile(ExplorerElement element) {
+    System.out.println("Ouverture de : " + element.getName() + " (" + element.getPath() + ")");
     try {
-      GlobalScreen.registerNativeHook();
-      GlobalScreen.addNativeKeyListener(new GlobalKeyListener(stage));
-    } catch (NativeHookException ex) {
-      System.err.println("Impossible d'activer le raccourci global : " + ex.getMessage());
+      File file = new File(element.getPath());
+      if (file.exists()) {
+        getHostServices().showDocument(file.toURI().toString());
+      } else {
+        // Tentative d'ouverture via le système si le chemin n'est pas un fichier local valide
+        // (Certains chemins dans la DB sont peut-être virtuels ou spécifiques)
+        getHostServices().showDocument(element.getPath());
+      }
+    } catch (Exception e) {
+      System.err.println("Erreur lors de l'ouverture du fichier : " + e.getMessage());
     }
   }
 
-  private List<String> fetchFoldersFromDb() {
-    List<String> folders = new ArrayList<>();
-    String sql =
-        "SELECT nom_element FROM Element WHERE type_element = 'DOSSIER' AND id_parent IS NULL ORDER"
-            + " BY date_creation";
-    try (Statement stmt = Database.getConnection().createStatement();
-        ResultSet rs = stmt.executeQuery(sql)) {
-      while (rs.next()) {
-        folders.add(rs.getString("nom_element"));
+  private void navigateTo(String parentId) {
+    parentStack.push(currentParentId);
+    currentParentId = parentId;
+    updateMenu();
+  }
+
+  private void navigateBack() {
+    if (!parentStack.isEmpty()) {
+      currentParentId = parentStack.pop();
+      updateMenu();
+    } else {
+      System.out.println("Déjà à la racine");
+    }
+  }
+
+  private void updateMenu() {
+    List<ExplorerElement> elements = fetchElementsFromDb(currentParentId);
+    menu.setElements(elements);
+  }
+
+  private void setupGlobalShortcut(Stage stage) {
+    try {
+      Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+      logger.setLevel(Level.OFF);
+      logger.setUseParentHandlers(false);
+
+      GlobalScreen.registerNativeHook();
+      GlobalScreen.addNativeKeyListener(new GlobalKeyListener(stage));
+    } catch (NativeHookException ex) {
+      System.err.println("Erreur JNativeHook : " + ex.getMessage());
+    }
+  }
+
+  private List<ExplorerElement> fetchElementsFromDb(String parentId) {
+    List<ExplorerElement> elements = new ArrayList<>();
+    String sql;
+    if (parentId == null) {
+      sql =
+          "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE id_parent"
+              + " IS NULL ORDER BY date_creation";
+    } else {
+      sql =
+          "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE id_parent"
+              + " = ? ORDER BY date_creation";
+    }
+
+    try (PreparedStatement pstmt = Database.getConnection().prepareStatement(sql)) {
+      if (parentId != null) {
+        pstmt.setString(1, parentId);
+      }
+      try (ResultSet rs = pstmt.executeQuery()) {
+        while (rs.next()) {
+          elements.add(
+              new ExplorerElement(
+                  rs.getString("id_element"),
+                  rs.getString("nom_element"),
+                  rs.getString("type_element"),
+                  rs.getString("emplacement")));
+        }
       }
     } catch (Exception e) {
-      System.err.println("Erreur lors de la récupération des dossiers : " + e.getMessage());
-      // Fallback au cas où
-      folders.addAll(Arrays.asList("Images", "Vidéos", "Documents", "Bureau"));
+      System.err.println("Erreur lors de la récupération des éléments : " + e.getMessage());
     }
-    return folders;
+    for (ExplorerElement element : elements) {
+      System.out.println(element.getName());
+    }
+    return elements;
   }
 
   public static void main(String[] args) {

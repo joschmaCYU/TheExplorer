@@ -18,22 +18,38 @@ import javafx.scene.text.TextAlignment;
 
 public class RadialMenu extends Pane {
 
+  public interface OnElementSelectedListener {
+    void onElementSelected(ExplorerElement element);
+
+    void onBackSelected();
+  }
+
   private static final double RADIUS = 150;
-  // Légère augmentation du centre pour laisser la place au texte sur 2 lignes
   private static final double CENTER_RADIUS = 55;
   private static final int MAX_ITEMS_PER_PAGE = 8;
 
   private final List<Shape> slices = new ArrayList<>();
   private Circle centerCircle;
   private Shape nextButton;
-  private final List<String> allElements;
+  private List<ExplorerElement> allElements;
   private int currentPage = 0;
   private double anglePerSlice;
   private int currentIndex = -2; // -2: Rien, -1: Retour, -3: Suivant, 0+: Slices
+  private OnElementSelectedListener listener;
 
-  public RadialMenu(List<String> elements) {
+  public RadialMenu(List<ExplorerElement> elements) {
     this.allElements = elements;
     this.setPrefSize(400, 400);
+    drawMenu();
+  }
+
+  public void setOnElementSelectedListener(OnElementSelectedListener listener) {
+    this.listener = listener;
+  }
+
+  public void setElements(List<ExplorerElement> elements) {
+    this.allElements = elements;
+    this.currentPage = 0;
     drawMenu();
   }
 
@@ -42,7 +58,7 @@ public class RadialMenu extends Pane {
     slices.clear();
 
     int startIdx = currentPage * MAX_ITEMS_PER_PAGE;
-    List<String> currentElements = new ArrayList<>();
+    List<ExplorerElement> currentElements = new ArrayList<>();
     boolean hasMore = allElements.size() > (startIdx + MAX_ITEMS_PER_PAGE);
     int itemsToShow = Math.min(MAX_ITEMS_PER_PAGE, allElements.size() - startIdx);
 
@@ -50,14 +66,13 @@ public class RadialMenu extends Pane {
       currentElements.add(allElements.get(startIdx + i));
     }
 
-    int numberOfSlices = currentElements.size();
+    int numberOfSlices = Math.max(1, currentElements.size());
     this.anglePerSlice = 360.0 / numberOfSlices;
 
-    for (int i = 0; i < numberOfSlices; i++) {
+    for (int i = 0; i < currentElements.size(); i++) {
       double startAngle = i * anglePerSlice;
       double endAngle = (i + 1) * anglePerSlice;
 
-      // L'écart entre le centre et les parts est géré ici (CENTER_RADIUS + 30)
       Shape slice = createDonutSlice(200, 200, CENTER_RADIUS + 30, RADIUS, startAngle, endAngle);
       slice.setFill(Color.web("#2c3e50", 0.8));
       slice.setStroke(Color.WHITE);
@@ -66,7 +81,7 @@ public class RadialMenu extends Pane {
       this.getChildren().add(slice);
 
       // --- CENTRAGE DU TEXTE DES PARTS ---
-      Text text = new Text(currentElements.get(i) + "\n(" + (i + 1) + ")");
+      Text text = new Text(currentElements.get(i).getName() + "\n(" + (i + 1) + ")");
       text.setFill(Color.WHITE);
       text.setTextAlignment(TextAlignment.CENTER);
       text.setTextOrigin(
@@ -145,8 +160,14 @@ public class RadialMenu extends Pane {
       double outerRadius,
       double startAngle,
       double endAngle) {
+    if (Math.abs(endAngle - startAngle) >= 360) {
+      endAngle = startAngle + 359.99;
+    }
+
     double startRad = Math.toRadians(startAngle);
     double endRad = Math.toRadians(endAngle);
+    boolean largeArc = Math.abs(endAngle - startAngle) > 180.0;
+
     Path path = new Path();
     path.getElements()
         .add(
@@ -161,7 +182,7 @@ public class RadialMenu extends Pane {
                 0,
                 centerX + outerRadius * Math.cos(endRad),
                 centerY + outerRadius * Math.sin(endRad),
-                false,
+                largeArc,
                 true));
     path.getElements()
         .add(
@@ -176,7 +197,7 @@ public class RadialMenu extends Pane {
                 0,
                 centerX + innerRadius * Math.cos(startRad),
                 centerY + innerRadius * Math.sin(startRad),
-                false,
+                largeArc,
                 false));
     path.getElements().add(new ClosePath());
     return path;
@@ -246,14 +267,14 @@ public class RadialMenu extends Pane {
         currentPage--;
         drawMenu();
       } else {
-        System.out.println("Action : Retour au niveau parent");
+        if (listener != null) listener.onBackSelected();
       }
     } else if (currentIndex == -3) {
       currentPage++;
       drawMenu();
     } else if (currentIndex >= 0 && currentIndex < slices.size()) {
       int actualIndex = (currentPage * MAX_ITEMS_PER_PAGE) + currentIndex;
-      System.out.println("Ouverture de : " + allElements.get(actualIndex));
+      if (listener != null) listener.onElementSelected(allElements.get(actualIndex));
     }
   }
 }

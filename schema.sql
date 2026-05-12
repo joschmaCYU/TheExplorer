@@ -111,18 +111,27 @@ INSERT INTO Tag (id_tag, nom_tag, icone_tag) VALUES
 ('T02', 'Brouillon', 'draft.png');
 
 INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_proprietaire, id_parent) VALUES 
-('E01', 'Racine_Jean', 'Dossier', '/home/jean', 'U01', NULL),
-('E02', 'Vidéos_SAE', 'Dossier', '/home/jean/videos', 'U01', 'E01'),
-('E03', 'logo.png', 'Fichier', '/home/jean', 'U01', 'E01'),
-('E04', 'demo.mp4', 'Fichier', '/home/jean/videos', 'U01', 'E02');
+('E01', 'Home', 'Dossier', '/home/jean', 'U01', NULL),
+('E02', 'Favoris', 'Dossier', '/home/jean/favoris', 'U01', 'E01'),
+('E03', 'Téléchargements', 'Dossier', '/home/jean/download', 'U01', 'E01'),
+('E04', 'Documents', 'Dossier', '/home/jean/documents', 'U01', 'E01'),
+('E05', 'Images', 'Dossier', '/home/jean/images', 'U01', 'E01'),
+('E06', 'Bureau', 'Dossier', '/home/jean/desktop', 'U01', 'E01'),
+('E07', 'Corbeille', 'Dossier', '/home/jean/bin', 'U01', 'E01'),
+('E08', 'Récents', 'Dossier', '/home/jean/recents', 'U01', 'E01'),
+('E09', 'Vidéos', 'Dossier', '/home/jean/videos', 'U01', 'E01'),
+('E10', 'logo.png', 'Fichier', '/home/jean', 'U01', 'E01'),
+('E11', 'demo.mp4', 'Fichier', '/home/jean/videos', 'U01', 'E09'),
+('E12', 'demo2.mp4', 'Fichier', '/home/jean/videos', 'U01', 'E09');
 
 INSERT INTO Dossier (id_element, icone, nb_elements) VALUES 
 ('E01', 'folder_home.png', 2),
-('E02', 'folder_video.png', 1);
+('E05', 'folder_image.png', 1);
 
 INSERT INTO Fichier (id_element, taille_octets, extension, open_with_app, icone) VALUES 
-('E03', 102450, 'png', 'APP1', 'file_image.png'),
-('E04', 15480000, 'mp4', 'APP2', 'file_video.png');
+('E10', 102450, 'png', 'APP1', 'file_image.png'),
+('E11', 15480000, 'mp4', 'APP2', 'file_video.mp4'),
+('E12', 1548000, 'mp4', 'APP3', 'demo2.mp4');
 
 INSERT INTO Element_Tag (id_element, id_tag) VALUES 
 ('E04', 'T01');
