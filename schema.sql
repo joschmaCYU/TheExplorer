@@ -118,7 +118,7 @@ INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_prop
 ('E_FICHIER', 'Fichier', 'Dossier', '/fichier', 'U01', NULL),
 -- Home folder
 ('E02', 'Favoris', 'Dossier', '<HOME>/Favoris', 'U01', 'E_FICHIER'),
-('E03', 'Téléchargements', 'Dossier', '<HOME>/Download', 'U01', 'E_FICHIER'),
+('E03', 'Téléchargements', 'Dossier', '<HOME>/Downloads', 'U01', 'E_FICHIER'),
 ('E04', 'Documents', 'Dossier', '<HOME>/Documents', 'U01', 'E_FICHIER'),
 ('E05', 'Images', 'Dossier', '<HOME>/Images', 'U01', 'E_FICHIER'),
 ('E06', 'Bureau', 'Dossier', '<HOME>/Desktop', 'U01', 'E_FICHIER'),

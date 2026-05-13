@@ -94,6 +94,7 @@ public class Explorer extends Application {
             case DIGIT9:
             case NUMPAD9:
               menu.highlightSlice(-3);
+              menu.executeAction();
               break;
             case DIGIT0:
             case NUMPAD0:

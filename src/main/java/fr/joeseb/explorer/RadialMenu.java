@@ -38,6 +38,8 @@ public class RadialMenu extends Pane {
   private OnElementSelectedListener listener;
 
   private boolean canGoBack = false;
+  private Color baseCenterColor;
+  private Color hoverCenterColor;
 
   public RadialMenu(List<ExplorerElement> elements, boolean canGoBack) {
     this.allElements = elements;
@@ -65,6 +67,9 @@ public class RadialMenu extends Pane {
     List<ExplorerElement> currentElements = new ArrayList<>();
     boolean hasMore = allElements.size() > (startIdx + MAX_ITEMS_PER_PAGE);
     int itemsToShow = Math.min(MAX_ITEMS_PER_PAGE, allElements.size() - startIdx);
+
+    int totalPages = (int) Math.ceil((double) allElements.size() / MAX_ITEMS_PER_PAGE);
+    if (totalPages == 0) totalPages = 1;
 
     for (int i = 0; i < itemsToShow; i++) {
       currentElements.add(allElements.get(startIdx + i));
@@ -102,38 +107,42 @@ public class RadialMenu extends Pane {
       text.setY(ty);
     }
 
-    // --- BOUTON CENTRAL AVEC FERMETURE ---
+    // --- BOUTON CENTRAL ---
     centerCircle = new Circle(200, 200, CENTER_RADIUS);
     centerCircle.setStroke(Color.WHITE);
     centerCircle.setStrokeWidth(2);
-    centerCircle.setFill(Color.web("#7f8c8d", 0.8)); // Toujours actif maintenant
     this.getChildren().add(centerCircle);
 
     String centerLabel;
+    String pageInfo = "Page " + (currentPage + 1) + "/" + totalPages;
+
     if (currentPage > 0) {
-      centerLabel = "PRÉCÉD.\n(0)";
+      centerLabel = "PRÉCÉD.\n(0)\n" + pageInfo;
+      baseCenterColor = Color.web("#e67e22", 0.8);
+      hoverCenterColor = Color.web("#d35400", 0.9);
     } else if (canGoBack) {
-      centerLabel = "RETOUR\n(0)";
+      centerLabel = "RETOUR\n(0)\n" + pageInfo;
+      baseCenterColor = Color.web("#e74c3c", 0.8);
+      hoverCenterColor = Color.web("#c0392b", 0.9);
     } else {
-      centerLabel = "FERMER\n(0)"; // NOUVEAU
+      centerLabel = "FERMER\n(0)\n" + pageInfo;
+      baseCenterColor = Color.web("#7f8c8d", 0.8);
+      hoverCenterColor = Color.web("#c0392b", 0.9);
     }
+
+    centerCircle.setFill(baseCenterColor);
 
     Text backText = new Text(centerLabel);
     backText.setFill(Color.WHITE);
     backText.setTextAlignment(TextAlignment.CENTER);
     backText.setTextOrigin(VPos.CENTER);
-    backText.setFont(Font.font(11));
+    backText.setFont(Font.font(10));
     backText.setMouseTransparent(true);
     this.getChildren().add(backText);
 
     double bBackW = backText.getLayoutBounds().getWidth();
     backText.setX(200 - (bBackW / 2));
-
-    if (hasMore) {
-      backText.setY(200 - (CENTER_RADIUS / 2) + 2);
-    } else {
-      backText.setY(200);
-    }
+    backText.setY(hasMore ? 200 - (CENTER_RADIUS / 2) + 2 : 200);
 
     // --- BOUTON SUIVANT ---
     if (hasMore) {
@@ -143,11 +152,11 @@ public class RadialMenu extends Pane {
       nextButton.setStrokeWidth(1);
       this.getChildren().add(nextButton);
 
-      Text nextTxt = new Text("SUIV.\n(9)");
+      Text nextTxt = new Text("SUIV.\n(9)\n");
       nextTxt.setFill(Color.WHITE);
       nextTxt.setTextAlignment(TextAlignment.CENTER);
       nextTxt.setTextOrigin(VPos.CENTER);
-      nextTxt.setFont(Font.font(11));
+      nextTxt.setFont(Font.font(10));
       nextTxt.setMouseTransparent(true);
       this.getChildren().add(nextTxt);
 
@@ -162,61 +171,37 @@ public class RadialMenu extends Pane {
     currentIndex = -2;
   }
 
-  private Shape createDonutSlice(
-      double centerX,
-      double centerY,
-      double innerRadius,
-      double outerRadius,
-      double startAngle,
-      double endAngle) {
-
-    if (Math.abs(endAngle - startAngle) >= 360) {
-      endAngle = startAngle + 359.99;
-    }
-    double startRad = Math.toRadians(startAngle);
-    double endRad = Math.toRadians(endAngle);
-    boolean largeArc = Math.abs(endAngle - startAngle) > 180.0;
-
+  private Shape createDonutSlice(double cx, double cy, double ir, double or, double sa, double ea) {
+    if (Math.abs(ea - sa) >= 360) ea = sa + 359.99;
+    double startRad = Math.toRadians(sa);
+    double endRad = Math.toRadians(ea);
+    boolean largeArc = Math.abs(ea - sa) > 180.0;
     Path path = new Path();
-    path.getElements()
-        .add(
-            new MoveTo(
-                centerX + outerRadius * Math.cos(startRad),
-                centerY + outerRadius * Math.sin(startRad)));
+    path.getElements().add(new MoveTo(cx + or * Math.cos(startRad), cy + or * Math.sin(startRad)));
     path.getElements()
         .add(
             new ArcTo(
-                outerRadius,
-                outerRadius,
-                0,
-                centerX + outerRadius * Math.cos(endRad),
-                centerY + outerRadius * Math.sin(endRad),
-                largeArc,
-                true));
-    path.getElements()
-        .add(
-            new LineTo(
-                centerX + innerRadius * Math.cos(endRad),
-                centerY + innerRadius * Math.sin(endRad)));
+                or, or, 0, cx + or * Math.cos(endRad), cy + or * Math.sin(endRad), largeArc, true));
+    path.getElements().add(new LineTo(cx + ir * Math.cos(endRad), cy + ir * Math.sin(endRad)));
     path.getElements()
         .add(
             new ArcTo(
-                innerRadius,
-                innerRadius,
+                ir,
+                ir,
                 0,
-                centerX + innerRadius * Math.cos(startRad),
-                centerY + innerRadius * Math.sin(startRad),
+                cx + ir * Math.cos(startRad),
+                cy + ir * Math.sin(startRad),
                 largeArc,
                 false));
     path.getElements().add(new ClosePath());
     return path;
   }
 
-  private Shape createSemiCircle(double centerX, double centerY, double radius) {
+  private Shape createSemiCircle(double cx, double cy, double r) {
     Path path = new Path();
-    path.getElements().add(new MoveTo(centerX - radius, centerY));
-    path.getElements().add(new LineTo(centerX + radius, centerY));
-    path.getElements().add(new ArcTo(radius, radius, 0, centerX - radius, centerY, false, true));
+    path.getElements().add(new MoveTo(cx - r, cy));
+    path.getElements().add(new LineTo(cx + r, cy));
+    path.getElements().add(new ArcTo(r, r, 0, cx - r, cy, false, true));
     path.getElements().add(new ClosePath());
     return path;
   }
@@ -226,45 +211,36 @@ public class RadialMenu extends Pane {
         event -> {
           double dx = event.getX() - 200;
           double dy = event.getY() - 200;
-          double distance = Math.sqrt(dx * dx + dy * dy);
-
-          if (distance < CENTER_RADIUS) {
-            if (nextButton != null && dy > 0) {
-              highlightSlice(-3); // Suivant
-            } else {
-              highlightSlice(-1); // Le bouton central est TOUJOURS actif maintenant
-            }
+          double dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CENTER_RADIUS) {
+            if (nextButton != null && dy > 0) highlightSlice(-3);
+            else highlightSlice(-1);
             return;
           }
-
-          if (distance > RADIUS) {
+          if (dist > RADIUS) {
             highlightSlice(-2);
             return;
           }
-
           double angle = Math.toDegrees(Math.atan2(dy, dx));
           if (angle < 0) angle += 360;
-          int targetIndex = (int) (angle / anglePerSlice);
-          highlightSlice(targetIndex);
+          highlightSlice((int) (angle / anglePerSlice));
         });
-
     this.setOnMouseClicked(event -> executeAction());
   }
 
   public void highlightSlice(int index) {
     if (index == currentIndex) return;
 
-    // Reset
-    if (currentIndex == -1) centerCircle.setFill(Color.web("#7f8c8d", 0.8));
+    // SÉCURITÉ : Ne pas surbriller "Suivant" s'il n'existe pas
+    if (index == -3 && nextButton == null) return;
+
+    if (currentIndex == -1) centerCircle.setFill(baseCenterColor);
     else if (currentIndex == -3 && nextButton != null)
       nextButton.setFill(Color.web("#27ae60", 0.9));
     else if (currentIndex >= 0 && currentIndex < slices.size())
       slices.get(currentIndex).setFill(Color.web("#2c3e50", 0.8));
 
-    // Active
-    if (index == -1)
-      centerCircle.setFill(
-          Color.web("#c0392b", 0.9)); // Rouge pour signifier une action critique (Fermer ou Retour)
+    if (index == -1) centerCircle.setFill(hoverCenterColor);
     else if (index == -3 && nextButton != null) nextButton.setFill(Color.web("#2ecc71", 1.0));
     else if (index >= 0 && index < slices.size())
       slices.get(index).setFill(Color.web("#3498db", 0.9));
@@ -277,11 +253,9 @@ public class RadialMenu extends Pane {
       if (currentPage > 0) {
         currentPage--;
         drawMenu();
-      } else {
-        // Appelle la méthode onBackSelected dans tous les cas !
-        if (listener != null) listener.onBackSelected();
-      }
-    } else if (currentIndex == -3) {
+      } else if (listener != null) listener.onBackSelected();
+    } else if (currentIndex == -3
+        && nextButton != null) { // SÉCURITÉ : Vérifie l'existence réelle du bouton
       currentPage++;
       drawMenu();
     } else if (currentIndex >= 0 && currentIndex < slices.size()) {
