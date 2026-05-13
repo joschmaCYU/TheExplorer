@@ -1,24 +1,35 @@
 package fr.joeseb.explorer;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.util.Properties;
 
 public class Database {
-  private static final String URL = "jdbc:postgresql://localhost:5432/explorer_db";
-  private static final String USER = "postgres";
-  private static final String PASS = "joe";
 
-  private static Connection connection = null;
+  private static Connection connection;
 
   public static Connection getConnection() {
     if (connection == null) {
       try {
-        connection = DriverManager.getConnection(URL, USER, PASS);
+        // 1. On charge le fichier de configuration
+        Properties props = new Properties();
+        try (InputStream input = new FileInputStream("db.properties")) {
+          props.load(input);
+        }
+
+        // 2. On récupère les valeurs
+        String url = props.getProperty("db.url");
+        String user = props.getProperty("db.user");
+        String password = props.getProperty("db.password");
+
+        // 3. On se connecte
+        connection = DriverManager.getConnection(url, user, password);
         System.out.println("Connexion à la base de données réussie !");
-      } catch (SQLException e) {
-        System.err.println("Erreur de connexion à la base de données !");
-        e.printStackTrace();
+
+      } catch (Exception e) {
+        System.err.println("Erreur de connexion : " + e.getMessage());
       }
     }
     return connection;

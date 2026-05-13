@@ -21,26 +21,24 @@ import javafx.stage.StageStyle;
 public class Explorer extends Application {
 
   private RadialMenu menu;
-  private final Stack<String> parentStack = new Stack<>();
-  private String currentParentId = null;
+  // 1. La pile stocke maintenant les éléments complets
+  private final Stack<ExplorerElement> parentStack = new Stack<>();
+  private ExplorerElement currentDirectory = null;
 
   @Override
   public void start(Stage primaryStage) {
-    // 1. Initialisation silencieuse de la base de données et des données de base
     Database.getConnection();
     DatabaseInitializer.initialize();
 
-    // 2. Récupération des dossiers racine
     List<ExplorerElement> elements = fetchElementsFromDb(null);
 
-    // 3. Création du menu radial
-    menu = new RadialMenu(elements);
+    menu = new RadialMenu(elements, false);
     menu.setOnElementSelectedListener(
         new RadialMenu.OnElementSelectedListener() {
           @Override
           public void onElementSelected(ExplorerElement element) {
-            if ("Dossier".equals(element.getType())) {
-              navigateTo(element.getId());
+            if ("Dossier".equalsIgnoreCase(element.getType())) {
+              navigateTo(element);
             } else {
               openFile(element);
             }
@@ -52,14 +50,12 @@ public class Explorer extends Application {
           }
         });
 
-    // 4. Configuration de l'interface (Transparence totale)
     StackPane root = new StackPane(menu);
     root.setStyle("-fx-background-color: transparent;");
 
     Scene scene = new Scene(root, 400, 400);
     scene.setFill(Color.TRANSPARENT);
 
-    // Gestion des touches (1-8 pour les parts, 0 pour retour, 9 pour suivant, Enter pour valider)
     scene.setOnKeyPressed(
         event -> {
           switch (event.getCode()) {
@@ -98,11 +94,12 @@ public class Explorer extends Application {
             case DIGIT9:
             case NUMPAD9:
               menu.highlightSlice(-3);
-              break; // Suivant
+              break;
             case DIGIT0:
             case NUMPAD0:
               menu.highlightSlice(-1);
-              break; // Retour
+              menu.executeAction(); // Ferme instantanément à la racine
+              break;
             case ENTER:
               menu.executeAction();
               break;
@@ -112,18 +109,14 @@ public class Explorer extends Application {
           }
         });
 
-    // Paramètres de la fenêtre système
     primaryStage.initStyle(StageStyle.TRANSPARENT);
     primaryStage.setScene(scene);
     primaryStage.setAlwaysOnTop(true);
 
-    // 5. Configuration de JNativeHook (Raccourci global)
     setupGlobalShortcut(primaryStage);
-
-    // Empêche l'application de s'arrêter quand on ferme la fenêtre
     Platform.setImplicitExit(false);
 
-    System.out.println("Explorateur prêt. Appuyez sur ESPACE pour afficher la roue.");
+    System.out.println("🚀 Explorateur prêt. Appuyez sur ESPACE pour afficher la roue.");
   }
 
   private void openFile(ExplorerElement element) {
@@ -133,8 +126,6 @@ public class Explorer extends Application {
       if (file.exists()) {
         getHostServices().showDocument(file.toURI().toString());
       } else {
-        // Tentative d'ouverture via le système si le chemin n'est pas un fichier local valide
-        // (Certains chemins dans la DB sont peut-être virtuels ou spécifiques)
         getHostServices().showDocument(element.getPath());
       }
     } catch (Exception e) {
@@ -142,24 +133,103 @@ public class Explorer extends Application {
     }
   }
 
-  private void navigateTo(String parentId) {
-    parentStack.push(currentParentId);
-    currentParentId = parentId;
+  private void navigateTo(ExplorerElement element) {
+    parentStack.push(currentDirectory);
+    currentDirectory = element;
     updateMenu();
   }
 
   private void navigateBack() {
     if (!parentStack.isEmpty()) {
-      currentParentId = parentStack.pop();
+      currentDirectory = parentStack.pop();
       updateMenu();
     } else {
-      System.out.println("Déjà à la racine");
+      ((Stage) menu.getScene().getWindow()).hide();
+      System.out.println("Fermeture de la roue.");
     }
   }
 
+  // --- LE COEUR DU MOTEUR HYBRIDE ---
   private void updateMenu() {
-    List<ExplorerElement> elements = fetchElementsFromDb(currentParentId);
-    menu.setElements(elements);
+    List<ExplorerElement> elements;
+
+    if (currentDirectory == null) {
+      // 1. On est à la racine de la base de données
+      elements = fetchElementsFromDb(null);
+    } else {
+      File realFolder = new File(currentDirectory.getPath());
+      System.out.println(
+          "🔍 Recherche du dossier : "
+              + realFolder.getAbsolutePath()
+              + " | Existe sur le PC ? "
+              + realFolder.exists());
+      if (realFolder.exists() && realFolder.isDirectory()) {
+        // 2. Le dossier existe physiquement sur le disque dur ! On lit le PC de l'utilisateur.
+        elements = fetchElementsFromDisk(realFolder);
+      } else {
+        // 3. C'est un dossier purement virtuel dans la BD (ex: "Mes Applications")
+        elements = fetchElementsFromDb(currentDirectory.getId());
+      }
+    }
+
+    menu.setElements(elements, !parentStack.isEmpty());
+  }
+
+  // LECTURE DU DISQUE PHYSIQUE
+  private List<ExplorerElement> fetchElementsFromDisk(File folder) {
+    List<ExplorerElement> elements = new ArrayList<>();
+    File[] files = folder.listFiles();
+
+    if (files != null) {
+      for (File file : files) {
+        if (!file.isHidden()) { // Ignore les fichiers cachés du système
+          String type = file.isDirectory() ? "Dossier" : "Fichier";
+          // Le chemin réel devient à la fois l'ID et l'emplacement
+          elements.add(
+              new ExplorerElement(
+                  file.getAbsolutePath(), file.getName(), type, file.getAbsolutePath()));
+        }
+      }
+    }
+    return elements;
+  }
+
+  // LECTURE DE LA BASE DE DONNÉES
+  private List<ExplorerElement> fetchElementsFromDb(String parentId) {
+    List<ExplorerElement> elements = new ArrayList<>();
+    String sql =
+        (parentId == null)
+            ? "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE"
+                + " id_parent IS NULL ORDER BY date_creation"
+            : "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE"
+                + " id_parent = ? ORDER BY date_creation";
+
+    try (PreparedStatement pstmt = Database.getConnection().prepareStatement(sql)) {
+      if (parentId != null) pstmt.setString(1, parentId);
+
+      try (ResultSet rs = pstmt.executeQuery()) {
+        while (rs.next()) {
+          // On remplace le tag <HOME> par le vrai chemin du PC de l'utilisateur
+          String rawPath = rs.getString("emplacement");
+          if (rawPath != null && rawPath.contains("<HOME>")) {
+            rawPath =
+                rawPath
+                    .replace("<HOME>", System.getProperty("user.home"))
+                    .replace("/", File.separator);
+          }
+
+          elements.add(
+              new ExplorerElement(
+                  rs.getString("id_element"),
+                  rs.getString("nom_element"),
+                  rs.getString("type_element"),
+                  rawPath));
+        }
+      }
+    } catch (Exception e) {
+      System.err.println("Erreur BD : " + e.getMessage());
+    }
+    return elements;
   }
 
   private void setupGlobalShortcut(Stage stage) {
@@ -173,42 +243,6 @@ public class Explorer extends Application {
     } catch (NativeHookException ex) {
       System.err.println("Erreur JNativeHook : " + ex.getMessage());
     }
-  }
-
-  private List<ExplorerElement> fetchElementsFromDb(String parentId) {
-    List<ExplorerElement> elements = new ArrayList<>();
-    String sql;
-    if (parentId == null) {
-      sql =
-          "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE id_parent"
-              + " IS NULL ORDER BY date_creation";
-    } else {
-      sql =
-          "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE id_parent"
-              + " = ? ORDER BY date_creation";
-    }
-
-    try (PreparedStatement pstmt = Database.getConnection().prepareStatement(sql)) {
-      if (parentId != null) {
-        pstmt.setString(1, parentId);
-      }
-      try (ResultSet rs = pstmt.executeQuery()) {
-        while (rs.next()) {
-          elements.add(
-              new ExplorerElement(
-                  rs.getString("id_element"),
-                  rs.getString("nom_element"),
-                  rs.getString("type_element"),
-                  rs.getString("emplacement")));
-        }
-      }
-    } catch (Exception e) {
-      System.err.println("Erreur lors de la récupération des éléments : " + e.getMessage());
-    }
-    for (ExplorerElement element : elements) {
-      System.out.println(element.getName());
-    }
-    return elements;
   }
 
   public static void main(String[] args) {

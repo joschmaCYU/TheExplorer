@@ -56,7 +56,8 @@ CREATE TABLE Fichier (
 CREATE TABLE Dossier (
     id_element VARCHAR PRIMARY KEY REFERENCES Element(id_element) ON DELETE CASCADE,
     icone VARCHAR(50) NOT NULL,
-    nb_elements INT DEFAULT 0
+    nb_elements INT DEFAULT 0,
+    id_app VARCHAR REFERENCES Application(id_app)
 );
 
 -- Tables d'associations N-N
@@ -102,36 +103,45 @@ INSERT INTO Membre_Groupe (id_user, id_groupe, role_user, date_rejoint) VALUES
 ('U02', 'G01', 'Membre', '2025-03-27');
 
 INSERT INTO Application (id_app, nom_app, chemin_exec, version_app) VALUES 
-('APP1', 'Visionneuse', 'C:\Program Files\Images\vis.exe', 'v1.2'),
-('APP2', 'VLC Player', 'C:\Program Files\VLC\vlc.exe', 'v3.0.20'),
-('APP3', 'VS Code', 'C:\Program Files\Microsoft VS Code\code.exe', 'v1.88');
+('APP_VLC', 'VLC Player', 'C:\Program Files\VLC\vlc.exe', 'v3.0.20'),
+('APP_VISIO', 'Visionneuse', 'C:\Program Files\Images\vis.exe', 'v1.2'),
+('APP_VSCODE', 'VS Code', 'C:\Program Files\Microsoft VS Code\code.exe', 'v1.88');
 
 INSERT INTO Tag (id_tag, nom_tag, icone_tag) VALUES 
 ('T01', 'Urgent', 'warning.png'),
 ('T02', 'Brouillon', 'draft.png');
 
 INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_proprietaire, id_parent) VALUES 
-('E01', 'Home', 'Dossier', '/home/jean', 'U01', NULL),
-('E02', 'Favoris', 'Dossier', '/home/jean/favoris', 'U01', 'E01'),
-('E03', 'Téléchargements', 'Dossier', '/home/jean/download', 'U01', 'E01'),
-('E04', 'Documents', 'Dossier', '/home/jean/documents', 'U01', 'E01'),
-('E05', 'Images', 'Dossier', '/home/jean/images', 'U01', 'E01'),
-('E06', 'Bureau', 'Dossier', '/home/jean/desktop', 'U01', 'E01'),
-('E07', 'Corbeille', 'Dossier', '/home/jean/bin', 'U01', 'E01'),
-('E08', 'Récents', 'Dossier', '/home/jean/recents', 'U01', 'E01'),
-('E09', 'Vidéos', 'Dossier', '/home/jean/videos', 'U01', 'E01'),
-('E10', 'logo.png', 'Fichier', '/home/jean', 'U01', 'E01'),
-('E11', 'demo.mp4', 'Fichier', '/home/jean/videos', 'U01', 'E09'),
-('E12', 'demo2.mp4', 'Fichier', '/home/jean/videos', 'U01', 'E09');
+-- Default values
+('E_DOSSIER_APPS', 'Application', 'Dossier', '/application', 'U01', NULL),
+('E_ACT', 'Action', 'Dossier', '/actions', 'U01', NULL),
+('E_FICHIER', 'Fichier', 'Dossier', '/fichier', 'U01', NULL),
+-- Home folder
+('E02', 'Favoris', 'Dossier', '<HOME>/Favoris', 'U01', 'E_FICHIER'),
+('E03', 'Téléchargements', 'Dossier', '<HOME>/Download', 'U01', 'E_FICHIER'),
+('E04', 'Documents', 'Dossier', '<HOME>/Documents', 'U01', 'E_FICHIER'),
+('E05', 'Images', 'Dossier', '<HOME>/Images', 'U01', 'E_FICHIER'),
+('E06', 'Bureau', 'Dossier', '<HOME>/Desktop', 'U01', 'E_FICHIER'),
+('E07', 'Corbeille', 'Dossier', '<HOME>/bin', 'U01', 'E_FICHIER'),
+('E08', 'Récents', 'Dossier', '<HOME>/Recents', 'U01', 'E_FICHIER'),
+('E09', 'Vidéos', 'Dossier', '<HOME>/Videos', 'U01', 'E_FICHIER'),
+-- Example values
+--('E10', 'demo.mp4', 'Fichier', '<HOME>/videos', 'U01', 'E09'),
+--('E11', 'demo2.mp4', 'Fichier', '<HOME>/videos', 'U01', 'E09'),
+-- App
+('E_VSCODE_LINK', 'Visual Studio Code', 'Dossier', '/apps/vscode', 'U01', 'E_DOSSIER_APPS'),
+('E_VLC_LINK', 'VLC Player', 'Dossier', '/apps/vlc', 'U01', 'E_DOSSIER_APPS');
 
-INSERT INTO Dossier (id_element, icone, nb_elements) VALUES 
-('E01', 'folder_home.png', 2),
-('E05', 'folder_image.png', 1);
 
-INSERT INTO Fichier (id_element, taille_octets, extension, open_with_app, icone) VALUES 
-('E10', 102450, 'png', 'APP1', 'file_image.png'),
-('E11', 15480000, 'mp4', 'APP2', 'file_video.mp4'),
-('E12', 1548000, 'mp4', 'APP3', 'demo2.mp4');
+INSERT INTO Dossier (id_element, icone, id_app, nb_elements) VALUES 
+('E_FICHIER', 'folder_home.png', NULL, 2),
+('E05', 'folder_image.png', NULL, 1),
+('E_DOSSIER_APPS', 'folder_apps.png', NULL, NULL),
+('E_VSCODE_LINK', 'icone_vscode.png', 'APP_VSCODE', NULL);
+
+--INSERT INTO Fichier (id_element, taille_octets, extension, open_with_app, icone) VALUES 
+--('E10', 102450, 'png', 'APP_VISIO', 'file_image.png'),
+--('E11', 15480000, 'mp4', 'APP_VLC', 'file_video.mp4'); 
 
 INSERT INTO Element_Tag (id_element, id_tag) VALUES 
 ('E04', 'T01');

@@ -34,11 +34,14 @@ public class RadialMenu extends Pane {
   private List<ExplorerElement> allElements;
   private int currentPage = 0;
   private double anglePerSlice;
-  private int currentIndex = -2; // -2: Rien, -1: Retour, -3: Suivant, 0+: Slices
+  private int currentIndex = -2;
   private OnElementSelectedListener listener;
 
-  public RadialMenu(List<ExplorerElement> elements) {
+  private boolean canGoBack = false;
+
+  public RadialMenu(List<ExplorerElement> elements, boolean canGoBack) {
     this.allElements = elements;
+    this.canGoBack = canGoBack;
     this.setPrefSize(400, 400);
     drawMenu();
   }
@@ -47,8 +50,9 @@ public class RadialMenu extends Pane {
     this.listener = listener;
   }
 
-  public void setElements(List<ExplorerElement> elements) {
+  public void setElements(List<ExplorerElement> elements, boolean canGoBack) {
     this.allElements = elements;
+    this.canGoBack = canGoBack;
     this.currentPage = 0;
     drawMenu();
   }
@@ -80,17 +84,15 @@ public class RadialMenu extends Pane {
       slices.add(slice);
       this.getChildren().add(slice);
 
-      // --- CENTRAGE DU TEXTE DES PARTS ---
       Text text = new Text(currentElements.get(i).getName() + "\n(" + (i + 1) + ")");
       text.setFill(Color.WHITE);
       text.setTextAlignment(TextAlignment.CENTER);
-      text.setTextOrigin(
-          VPos.CENTER); // <-- FIX: Le point (X,Y) est maintenant le vrai centre du texte
+      text.setTextOrigin(VPos.CENTER);
       text.setMouseTransparent(true);
       this.getChildren().add(text);
 
       double middleAngle = Math.toRadians(startAngle + anglePerSlice / 2);
-      double textRadius = (RADIUS + (CENTER_RADIUS + 30)) / 2; // Milieu de la tranche
+      double textRadius = (RADIUS + (CENTER_RADIUS + 30)) / 2;
 
       double tx =
           200 + textRadius * Math.cos(middleAngle) - (text.getLayoutBounds().getWidth() / 2);
@@ -100,33 +102,40 @@ public class RadialMenu extends Pane {
       text.setY(ty);
     }
 
-    // --- BOUTON CENTRAL (RETOUR / PRÉCÉDENT - TOUCHE 0) ---
+    // --- BOUTON CENTRAL AVEC FERMETURE ---
     centerCircle = new Circle(200, 200, CENTER_RADIUS);
-    centerCircle.setFill(Color.web("#7f8c8d", 0.8));
     centerCircle.setStroke(Color.WHITE);
     centerCircle.setStrokeWidth(2);
+    centerCircle.setFill(Color.web("#7f8c8d", 0.8)); // Toujours actif maintenant
     this.getChildren().add(centerCircle);
 
-    String centerLabel = (currentPage > 0) ? "PRÉCÉD.\n(0)" : "RETOUR\n(0)";
+    String centerLabel;
+    if (currentPage > 0) {
+      centerLabel = "PRÉCÉD.\n(0)";
+    } else if (canGoBack) {
+      centerLabel = "RETOUR\n(0)";
+    } else {
+      centerLabel = "FERMER\n(0)"; // NOUVEAU
+    }
+
     Text backText = new Text(centerLabel);
     backText.setFill(Color.WHITE);
     backText.setTextAlignment(TextAlignment.CENTER);
-    backText.setTextOrigin(VPos.CENTER); // <-- FIX
-    backText.setFont(Font.font(11)); // Police un poil plus petite pour que ça rentre parfaitement
+    backText.setTextOrigin(VPos.CENTER);
+    backText.setFont(Font.font(11));
     backText.setMouseTransparent(true);
     this.getChildren().add(backText);
 
     double bBackW = backText.getLayoutBounds().getWidth();
     backText.setX(200 - (bBackW / 2));
 
-    // Si y a le bouton "Suivant", on remonte le texte "Retour" dans la moitié haute
     if (hasMore) {
-      backText.setY(200 - (CENTER_RADIUS / 2) + 2); // +2 pour ajustement optique
+      backText.setY(200 - (CENTER_RADIUS / 2) + 2);
     } else {
-      backText.setY(200); // S'il est tout seul, il est parfaitement au milieu
+      backText.setY(200);
     }
 
-    // --- BOUTON SUIVANT (DEMI-CERCLE - TOUCHE 9) ---
+    // --- BOUTON SUIVANT ---
     if (hasMore) {
       nextButton = createSemiCircle(200, 200, CENTER_RADIUS);
       nextButton.setFill(Color.web("#27ae60", 0.9));
@@ -137,14 +146,14 @@ public class RadialMenu extends Pane {
       Text nextTxt = new Text("SUIV.\n(9)");
       nextTxt.setFill(Color.WHITE);
       nextTxt.setTextAlignment(TextAlignment.CENTER);
-      nextTxt.setTextOrigin(VPos.CENTER); // <-- FIX
+      nextTxt.setTextOrigin(VPos.CENTER);
       nextTxt.setFont(Font.font(11));
       nextTxt.setMouseTransparent(true);
       this.getChildren().add(nextTxt);
 
       double bNextW = nextTxt.getLayoutBounds().getWidth();
       nextTxt.setX(200 - (bNextW / 2));
-      nextTxt.setY(200 + (CENTER_RADIUS / 2) - 2); // Placé dans la moitié basse
+      nextTxt.setY(200 + (CENTER_RADIUS / 2) - 2);
     } else {
       nextButton = null;
     }
@@ -160,10 +169,10 @@ public class RadialMenu extends Pane {
       double outerRadius,
       double startAngle,
       double endAngle) {
+
     if (Math.abs(endAngle - startAngle) >= 360) {
       endAngle = startAngle + 359.99;
     }
-
     double startRad = Math.toRadians(startAngle);
     double endRad = Math.toRadians(endAngle);
     boolean largeArc = Math.abs(endAngle - startAngle) > 180.0;
@@ -223,7 +232,7 @@ public class RadialMenu extends Pane {
             if (nextButton != null && dy > 0) {
               highlightSlice(-3); // Suivant
             } else {
-              highlightSlice(-1); // Retour
+              highlightSlice(-1); // Le bouton central est TOUJOURS actif maintenant
             }
             return;
           }
@@ -253,7 +262,9 @@ public class RadialMenu extends Pane {
       slices.get(currentIndex).setFill(Color.web("#2c3e50", 0.8));
 
     // Active
-    if (index == -1) centerCircle.setFill(Color.web("#c0392b", 0.9));
+    if (index == -1)
+      centerCircle.setFill(
+          Color.web("#c0392b", 0.9)); // Rouge pour signifier une action critique (Fermer ou Retour)
     else if (index == -3 && nextButton != null) nextButton.setFill(Color.web("#2ecc71", 1.0));
     else if (index >= 0 && index < slices.size())
       slices.get(index).setFill(Color.web("#3498db", 0.9));
@@ -267,6 +278,7 @@ public class RadialMenu extends Pane {
         currentPage--;
         drawMenu();
       } else {
+        // Appelle la méthode onBackSelected dans tous les cas !
         if (listener != null) listener.onBackSelected();
       }
     } else if (currentIndex == -3) {
