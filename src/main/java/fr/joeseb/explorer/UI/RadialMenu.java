@@ -1,8 +1,13 @@
 package fr.joeseb.explorer;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.geometry.VPos;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcTo;
@@ -18,12 +23,6 @@ import javafx.scene.text.TextAlignment;
 
 public class RadialMenu extends Pane {
 
-  public interface OnElementSelectedListener {
-    void onElementSelected(ExplorerElement element);
-
-    void onBackSelected();
-  }
-
   private static final double RADIUS = 150;
   private static final double CENTER_RADIUS = 55;
   private static final int MAX_ITEMS_PER_PAGE = 8;
@@ -35,7 +34,7 @@ public class RadialMenu extends Pane {
   private int currentPage = 0;
   private double anglePerSlice;
   private int currentIndex = -2;
-  private OnElementSelectedListener listener;
+  private MenuListener listener; // Utilisation de la nouvelle interface externe
 
   private boolean canGoBack = false;
   private Color baseCenterColor;
@@ -48,7 +47,7 @@ public class RadialMenu extends Pane {
     drawMenu();
   }
 
-  public void setOnElementSelectedListener(OnElementSelectedListener listener) {
+  public void setMenuListener(MenuListener listener) {
     this.listener = listener;
   }
 
@@ -57,6 +56,14 @@ public class RadialMenu extends Pane {
     this.canGoBack = canGoBack;
     this.currentPage = 0;
     drawMenu();
+  }
+
+  public ExplorerElement getHighlightedElement() {
+    if (currentIndex >= 0 && currentIndex < slices.size()) {
+      int actualIndex = (currentPage * MAX_ITEMS_PER_PAGE) + currentIndex;
+      return allElements.get(actualIndex);
+    }
+    return null;
   }
 
   private void drawMenu() {
@@ -75,57 +82,73 @@ public class RadialMenu extends Pane {
       currentElements.add(allElements.get(startIdx + i));
     }
 
-    int numberOfSlices = Math.max(1, currentElements.size());
-    this.anglePerSlice = 360.0 / numberOfSlices;
+    if (currentElements.isEmpty()) {
+      Shape emptySlice = createDonutSlice(200, 200, CENTER_RADIUS + 30, RADIUS, 0, 359.99);
+      emptySlice.setFill(Color.web("#34495e", 0.4));
+      emptySlice.setStroke(Color.WHITE);
+      emptySlice.setStrokeWidth(1);
+      this.getChildren().add(emptySlice);
 
-    for (int i = 0; i < currentElements.size(); i++) {
-      double startAngle = i * anglePerSlice;
-      double endAngle = (i + 1) * anglePerSlice;
+      Text emptyText = new Text("Paneau vide\nGlissez vos elements ici");
+      emptyText.setFill(Color.WHITE);
+      emptyText.setTextAlignment(TextAlignment.CENTER);
+      emptyText.setTextOrigin(VPos.CENTER);
+      emptyText.setMouseTransparent(true);
+      emptyText.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 11));
+      this.getChildren().add(emptyText);
 
-      Shape slice = createDonutSlice(200, 200, CENTER_RADIUS + 30, RADIUS, startAngle, endAngle);
-      slice.setFill(Color.web("#2c3e50", 0.8));
-      slice.setStroke(Color.WHITE);
-      slice.setStrokeWidth(1);
-      slices.add(slice);
-      this.getChildren().add(slice);
+      emptyText.setX(200 - emptyText.getLayoutBounds().getWidth() / 2);
+      emptyText.setY(200);
+    } else {
+      int numberOfSlices = Math.max(1, currentElements.size());
+      this.anglePerSlice = 360.0 / numberOfSlices;
 
-      Text text = new Text(currentElements.get(i).getName() + "\n(" + (i + 1) + ")");
-      text.setFill(Color.WHITE);
-      text.setTextAlignment(TextAlignment.CENTER);
-      text.setTextOrigin(VPos.CENTER);
-      text.setMouseTransparent(true);
-      this.getChildren().add(text);
+      for (int i = 0; i < currentElements.size(); i++) {
+        double startAngle = i * anglePerSlice;
+        double endAngle = (i + 1) * anglePerSlice;
 
-      double middleAngle = Math.toRadians(startAngle + anglePerSlice / 2);
-      double textRadius = (RADIUS + (CENTER_RADIUS + 30)) / 2;
+        Shape slice = createDonutSlice(200, 200, CENTER_RADIUS + 30, RADIUS, startAngle, endAngle);
+        slice.setFill(Color.web("#2c3e50", 0.8));
+        slice.setStroke(Color.WHITE);
+        slice.setStrokeWidth(1);
+        slices.add(slice);
+        this.getChildren().add(slice);
 
-      double tx =
-          200 + textRadius * Math.cos(middleAngle) - (text.getLayoutBounds().getWidth() / 2);
-      double ty = 200 + textRadius * Math.sin(middleAngle);
+        Text text = new Text(currentElements.get(i).getName() + "\n(" + (i + 1) + ")");
+        text.setFill(Color.WHITE);
+        text.setTextAlignment(TextAlignment.CENTER);
+        text.setTextOrigin(VPos.CENTER);
+        text.setMouseTransparent(true);
+        this.getChildren().add(text);
 
-      text.setX(tx);
-      text.setY(ty);
+        double middleAngle = Math.toRadians(startAngle + anglePerSlice / 2);
+        double textRadius = (RADIUS + (CENTER_RADIUS + 30)) / 2;
+
+        double tx =
+            200 + textRadius * Math.cos(middleAngle) - (text.getLayoutBounds().getWidth() / 2);
+        double ty = 200 + textRadius * Math.sin(middleAngle);
+
+        text.setX(tx);
+        text.setY(ty);
+      }
     }
 
-    // --- BOUTON CENTRAL ---
     centerCircle = new Circle(200, 200, CENTER_RADIUS);
     centerCircle.setStroke(Color.WHITE);
     centerCircle.setStrokeWidth(2);
     this.getChildren().add(centerCircle);
 
     String centerLabel;
-    String pageInfo = "Page " + (currentPage + 1) + "/" + totalPages;
-
     if (currentPage > 0) {
-      centerLabel = "PRÉCÉD.\n(0)\n" + pageInfo;
+      centerLabel = "PRECED.\n(0)";
       baseCenterColor = Color.web("#e67e22", 0.8);
       hoverCenterColor = Color.web("#d35400", 0.9);
     } else if (canGoBack) {
-      centerLabel = "RETOUR\n(0)\n" + pageInfo;
+      centerLabel = "RETOUR\n(0)";
       baseCenterColor = Color.web("#e74c3c", 0.8);
       hoverCenterColor = Color.web("#c0392b", 0.9);
     } else {
-      centerLabel = "FERMER\n(0)\n" + pageInfo;
+      centerLabel = "FERMER\n(0)";
       baseCenterColor = Color.web("#7f8c8d", 0.8);
       hoverCenterColor = Color.web("#c0392b", 0.9);
     }
@@ -136,7 +159,7 @@ public class RadialMenu extends Pane {
     backText.setFill(Color.WHITE);
     backText.setTextAlignment(TextAlignment.CENTER);
     backText.setTextOrigin(VPos.CENTER);
-    backText.setFont(Font.font(10));
+    backText.setFont(Font.font(11));
     backText.setMouseTransparent(true);
     this.getChildren().add(backText);
 
@@ -144,7 +167,20 @@ public class RadialMenu extends Pane {
     backText.setX(200 - (bBackW / 2));
     backText.setY(hasMore ? 200 - (CENTER_RADIUS / 2) + 2 : 200);
 
-    // --- BOUTON SUIVANT ---
+    if (totalPages > 1) {
+      Text pageIndicator = new Text(String.valueOf(currentPage + 1) + " / " + totalPages);
+      pageIndicator.setFill(Color.web("#bdc3c7"));
+      pageIndicator.setTextAlignment(TextAlignment.CENTER);
+      pageIndicator.setTextOrigin(VPos.CENTER);
+      pageIndicator.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
+      pageIndicator.setMouseTransparent(true);
+      this.getChildren().add(pageIndicator);
+
+      double pIndW = pageIndicator.getLayoutBounds().getWidth();
+      pageIndicator.setX(200 - (pIndW / 2));
+      pageIndicator.setY(hasMore ? 200 : 200 + (CENTER_RADIUS / 2) - 5);
+    }
+
     if (hasMore) {
       nextButton = createSemiCircle(200, 200, CENTER_RADIUS);
       nextButton.setFill(Color.web("#27ae60", 0.9));
@@ -152,7 +188,7 @@ public class RadialMenu extends Pane {
       nextButton.setStrokeWidth(1);
       this.getChildren().add(nextButton);
 
-      Text nextTxt = new Text("SUIV.\n(9)\n");
+      Text nextTxt = new Text("SUIV.\n(9)");
       nextTxt.setFill(Color.WHITE);
       nextTxt.setTextAlignment(TextAlignment.CENTER);
       nextTxt.setTextOrigin(VPos.CENTER);
@@ -217,7 +253,7 @@ public class RadialMenu extends Pane {
             else highlightSlice(-1);
             return;
           }
-          if (dist > RADIUS) {
+          if (dist > RADIUS || slices.isEmpty()) {
             highlightSlice(-2);
             return;
           }
@@ -225,13 +261,42 @@ public class RadialMenu extends Pane {
           if (angle < 0) angle += 360;
           highlightSlice((int) (angle / anglePerSlice));
         });
-    this.setOnMouseClicked(event -> executeAction());
+
+    this.setOnMouseClicked(
+        event -> {
+          if (event.getButton() == MouseButton.SECONDARY) {
+            ExplorerElement el = getHighlightedElement();
+            if (el != null && listener != null) {
+              listener.onElementEdit(el);
+            }
+          } else {
+            executeAction();
+          }
+        });
+
+    this.setOnDragDetected(
+        event -> {
+          ExplorerElement el = getHighlightedElement();
+          if (el != null) {
+            Dragboard db = this.startDragAndDrop(TransferMode.COPY);
+            ClipboardContent content = new ClipboardContent();
+
+            if ("Texte".equalsIgnoreCase(el.getType())) {
+              content.putString(el.getPath());
+            } else {
+              File f = new File(el.getPath());
+              if (f.exists()) {
+                content.putFiles(List.of(f));
+              }
+            }
+            db.setContent(content);
+            event.consume();
+          }
+        });
   }
 
   public void highlightSlice(int index) {
     if (index == currentIndex) return;
-
-    // SÉCURITÉ : Ne pas surbriller "Suivant" s'il n'existe pas
     if (index == -3 && nextButton == null) return;
 
     if (currentIndex == -1) centerCircle.setFill(baseCenterColor);
@@ -254,8 +319,7 @@ public class RadialMenu extends Pane {
         currentPage--;
         drawMenu();
       } else if (listener != null) listener.onBackSelected();
-    } else if (currentIndex == -3
-        && nextButton != null) { // SÉCURITÉ : Vérifie l'existence réelle du bouton
+    } else if (currentIndex == -3 && nextButton != null) {
       currentPage++;
       drawMenu();
     } else if (currentIndex >= 0 && currentIndex < slices.size()) {
