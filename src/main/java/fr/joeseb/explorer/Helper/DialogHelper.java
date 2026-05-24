@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceDialog;
@@ -22,6 +24,25 @@ public class DialogHelper {
 
   public DialogHelper(ElementRepository repository) {
     this.repository = repository;
+  }
+
+  public void showDeleteConfirmation(Stage owner, ExplorerElement el, Runnable onConfirm) {
+    Alert alert = new Alert(AlertType.CONFIRMATION);
+    alert.initOwner(owner);
+    alert.setTitle("Confirmation de suppression");
+    alert.setHeaderText("Supprimer : " + el.getName());
+    alert.setContentText(
+        "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.");
+
+    // On attend la réponse de l'utilisateur
+    alert
+        .showAndWait()
+        .ifPresent(
+            response -> {
+              if (response == ButtonType.OK) {
+                onConfirm.run(); // Exécute la suppression si on clique sur OK
+              }
+            });
   }
 
   public void showAddDialog(Stage owner, String currentDirectoryId, Runnable onComplete) {

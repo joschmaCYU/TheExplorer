@@ -21,10 +21,6 @@ public class DatabaseInitializer {
       String userId = "user-default";
       insertUser(conn, userId, "Utilisateur", "Principal", "admin@explorer.local");
 
-      // 3. Créer les Tags de base
-      insertTag(conn, "tag-fav", "Favori", "star");
-      insertTag(conn, "tag-work", "Travail", "briefcase");
-      insertTag(conn, "tag-perso", "Personnel", "user");
     } catch (Exception e) {
       System.err.println("Erreur lors de l'initialisation : " + e.getMessage());
       e.printStackTrace();

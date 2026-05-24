@@ -1,6 +1,10 @@
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/UI/ExplorerElement.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/BaseDeDonnée/Database.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/Helper/DiskManager.java
 /home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/Explorer.java
-/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/Database.java
-/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/RadialMenu.java
-/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/ExplorerElement.java
-/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/DatabaseInitializer.java
-/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/GlobalKeyListener.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/UI/RadialMenu.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/Helper/GlobalKeyListener.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/BaseDeDonnée/DatabaseInitializer.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/Helper/DialogHelper.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/UI/MenuListener.java
+/home/josch/TheExplorer/src/main/java/fr/joeseb/explorer/BaseDeDonnée/ElementRepository.java

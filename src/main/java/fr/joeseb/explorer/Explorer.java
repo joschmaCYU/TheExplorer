@@ -119,7 +119,7 @@ public class Explorer extends Application {
           if (elToEdit != null)
             dialogHelper.showEditDialog(primaryStage, elToEdit, this::updateMenu);
         });
-    btnRemove.setOnAction(e -> handleDelete());
+    btnRemove.setOnAction(e -> handleDelete(primaryStage));
 
     HBox btnBox = new HBox(10, btnAdd, btnEdit, btnRemove);
     btnBox.setAlignment(Pos.CENTER);
@@ -246,7 +246,7 @@ public class Explorer extends Application {
               break;
             case SUBTRACT:
             case MINUS:
-              handleDelete();
+              handleDelete(primaryStage);
               break;
           }
         });
@@ -267,11 +267,17 @@ public class Explorer extends Application {
     }
   }
 
-  private void handleDelete() {
+  private void handleDelete(Stage primaryStage) {
     ExplorerElement el = menu.getHighlightedElement();
     if (el != null) {
-      repository.deleteElement(el.getId());
-      updateMenu();
+      // On appelle la boîte de dialogue de confirmation
+      dialogHelper.showDeleteConfirmation(
+          primaryStage,
+          el,
+          () -> {
+            repository.deleteElement(el.getId());
+            updateMenu();
+          });
     }
   }
 

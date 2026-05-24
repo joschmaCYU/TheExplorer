@@ -134,7 +134,7 @@ INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_prop
 ('E_DOSSIER_APPS', 'Application', 'Dossier', '/application', 'U01', NULL),
 ('E_TEXTE', 'Texte', 'Dossier', '/actions', 'U01', NULL),
 ('E_FICHIER', 'Fichier', 'Dossier', '/fichier', 'U01', NULL),
-('E_TAG', 'Fichier', 'Dossier', '/tag', 'U01', NULL),
+('E_TAG', 'TAG', 'Dossier', '/tag', 'U01', NULL),
 ('E02', 'Favoris', 'Dossier', '<HOME>/Favoris', 'U01', 'E_FICHIER'),
 ('E_VSCODE_LINK', 'Visual Studio Code', 'Dossier', '/apps/vscode', 'U01', 'E_DOSSIER_APPS'),
 ('E_VLC_LINK', 'VLC Player', 'Dossier', '/apps/vlc', 'U01', 'E_DOSSIER_APPS')
