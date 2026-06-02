@@ -5,6 +5,7 @@ import com.github.kwhat.jnativehook.NativeHookException;
 import java.io.File;
 import java.util.List;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -17,6 +18,7 @@ import javafx.scene.control.Button;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
@@ -32,29 +34,33 @@ public class Explorer extends Application {
   private final Stack<ExplorerElement> parentStack = new Stack<>();
   private ExplorerElement currentDirectory = null;
 
-  // Services indépendants
   private ElementRepository repository;
   private DiskManager diskManager;
   private DialogHelper dialogHelper;
+  private HistoryManager historyManager;
 
   @Override
   public void start(Stage primaryStage) {
     Database.getConnection();
     DatabaseInitializer.initialize();
 
-    // Initialisation des services
     repository = new ElementRepository();
+
+    // NOUVEAU : Récupère l'utilisateur OS et initialise l'historique
+    String currentUser = repository.syncSystemUser();
+    historyManager = new HistoryManager(repository, currentUser);
+
     diskManager = new DiskManager(getHostServices());
-    dialogHelper = new DialogHelper(repository);
+    dialogHelper = new DialogHelper(repository, historyManager);
 
     menu = new RadialMenu(repository.fetchElements(null), false);
 
-    // Configuration du listener découpé
     menu.setMenuListener(
         new MenuListener() {
           @Override
           public void onElementSelected(ExplorerElement element) {
-            if ("Dossier".equalsIgnoreCase(element.getType())) {
+            if ("Dossier".equalsIgnoreCase(element.getType())
+                || "Tag".equalsIgnoreCase(element.getType())) {
               navigateTo(element);
             } else if ("Texte".equalsIgnoreCase(element.getType())) {
               Clipboard clipboard = Clipboard.getSystemClipboard();
@@ -78,8 +84,6 @@ public class Explorer extends Application {
           }
         });
 
-    setupTopUI(primaryStage);
-
     StackPane root = new StackPane(layoutUI(primaryStage));
     root.setStyle("-fx-background-color: transparent;");
 
@@ -94,7 +98,7 @@ public class Explorer extends Application {
     primaryStage.setAlwaysOnTop(true);
     Platform.setImplicitExit(false);
 
-    System.out.println("Explorateur pret.");
+    System.out.println("Explorateur pret pour l'utilisateur : " + currentUser);
   }
 
   private VBox layoutUI(Stage primaryStage) {
@@ -133,8 +137,6 @@ public class Explorer extends Application {
     return layout;
   }
 
-  private void setupTopUI(Stage primaryStage) {}
-
   private void setupSceneEvents(Scene scene, Stage primaryStage) {
     scene.addEventFilter(
         MouseEvent.MOUSE_CLICKED,
@@ -150,9 +152,7 @@ public class Explorer extends Application {
             hitButton = btnBox.getBoundsInLocal().contains(btnPt);
           }
 
-          if (dist > 150 && !hitButton) {
-            primaryStage.hide();
-          }
+          if (dist > 150 && !hitButton) primaryStage.hide();
         });
 
     scene.setOnDragOver(
@@ -170,12 +170,18 @@ public class Explorer extends Application {
           if (db.hasFiles()) {
             for (File file : db.getFiles()) {
               String type = file.isDirectory() ? "Dossier" : "Fichier";
-              repository.insertElement(
-                  file.getName(), type, file.getAbsolutePath(), getCurrentDirId());
+              String id = UUID.randomUUID().toString().substring(0, 8);
+              historyManager.executeAction(
+                  historyManager
+                  .new CreateCommand(
+                      id, file.getName(), type, file.getAbsolutePath(), getCurrentDirId()));
             }
             success = true;
           } else if (db.hasString()) {
-            repository.insertElement("Texte_Copie", "Texte", db.getString(), getCurrentDirId());
+            String id = UUID.randomUUID().toString().substring(0, 8);
+            historyManager.executeAction(
+                historyManager
+                .new CreateCommand(id, "Texte_Copie", "Texte", db.getString(), getCurrentDirId()));
             success = true;
           }
           event.setDropCompleted(success);
@@ -185,6 +191,18 @@ public class Explorer extends Application {
 
     scene.setOnKeyPressed(
         event -> {
+          // NOUVEAU : Raccourcis d'Historique (Undo / Redo)
+          if (event.isControlDown() && event.getCode() == KeyCode.Z) {
+            historyManager.undo();
+            updateMenu();
+            return;
+          }
+          if (event.isControlDown() && event.getCode() == KeyCode.Y) {
+            historyManager.redo();
+            updateMenu();
+            return;
+          }
+
           switch (event.getCode()) {
             case DIGIT1:
             case NUMPAD1:
@@ -270,12 +288,11 @@ public class Explorer extends Application {
   private void handleDelete(Stage primaryStage) {
     ExplorerElement el = menu.getHighlightedElement();
     if (el != null) {
-      // On appelle la boîte de dialogue de confirmation
       dialogHelper.showDeleteConfirmation(
           primaryStage,
           el,
           () -> {
-            repository.deleteElement(el.getId());
+            historyManager.executeAction(historyManager.new DeleteCommand(el, getCurrentDirId()));
             updateMenu();
           });
     }
@@ -285,6 +302,14 @@ public class Explorer extends Application {
     List<ExplorerElement> elements;
     if (currentDirectory == null) {
       elements = repository.fetchElements(null);
+    } else if ("E_TAG".equals(currentDirectory.getId())) {
+      // 2. L'utilisateur a cliqué sur le dossier "Tags" : on affiche tous les tags
+      elements = repository.getAllTags();
+
+    } else if ("Tag".equalsIgnoreCase(currentDirectory.getType())) {
+      // 3. L'utilisateur a cliqué sur un tag précis (ex: "ttest") : on affiche le contenu
+      elements = repository.getElementsByTag(currentDirectory.getId());
+
     } else {
       File realFolder = new File(currentDirectory.getPath());
       if (realFolder.exists() && realFolder.isDirectory()) {

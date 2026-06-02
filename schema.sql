@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS Membre_Groupe (
 );
 
 CREATE TABLE IF NOT EXISTS Element_Tag (
-    id_element VARCHAR REFERENCES Element(id_element),
-    id_tag VARCHAR REFERENCES Tag(id_tag),
+    id_element VARCHAR REFERENCES Element(id_element) ON DELETE CASCADE, -- AJOUT DU CASCADE
+    id_tag VARCHAR REFERENCES Tag(id_tag) ON DELETE CASCADE, -- AJOUT DU CASCADE
     PRIMARY KEY (id_element, id_tag)
 );
 
@@ -92,15 +92,8 @@ CREATE TABLE IF NOT EXISTS Historique (
     id_historique VARCHAR PRIMARY KEY,
     type_action enum_action NOT NULL,
     date_action DATE DEFAULT CURRENT_DATE,
-    id_element VARCHAR REFERENCES Element(id_element) NOT NULL,
+    id_element VARCHAR NOT NULL, -- SUPPRESSION DU 'REFERENCES Element' (L'historique est désormais indépendant)
     id_user VARCHAR REFERENCES Utilisateur(id_user) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS Corbeille (
-    id_corbeille VARCHAR PRIMARY KEY,
-    date_ajout DATE DEFAULT CURRENT_DATE NOT NULL,
-    date_suppression_def DATE,
-    id_element VARCHAR REFERENCES Element(id_element) UNIQUE NOT NULL
 );
 
 -- Utilisation de ON CONFLICT DO NOTHING pour ne pas écraser les données existantes

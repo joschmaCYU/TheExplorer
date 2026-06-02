@@ -98,7 +98,7 @@ public class RadialMenu extends Pane {
       this.getChildren().add(emptyText);
 
       emptyText.setX(200 - emptyText.getLayoutBounds().getWidth() / 2);
-      emptyText.setY(200);
+      emptyText.setY(200 + CENTER_RADIUS + 30);
     } else {
       int numberOfSlices = Math.max(1, currentElements.size());
       this.anglePerSlice = 360.0 / numberOfSlices;

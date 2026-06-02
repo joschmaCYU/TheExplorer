@@ -3,6 +3,7 @@ package fr.joeseb.explorer;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
@@ -21,28 +22,11 @@ import javafx.stage.Stage;
 public class DialogHelper {
 
   private final ElementRepository repository;
+  private final HistoryManager historyManager;
 
-  public DialogHelper(ElementRepository repository) {
+  public DialogHelper(ElementRepository repository, HistoryManager historyManager) {
     this.repository = repository;
-  }
-
-  public void showDeleteConfirmation(Stage owner, ExplorerElement el, Runnable onConfirm) {
-    Alert alert = new Alert(AlertType.CONFIRMATION);
-    alert.initOwner(owner);
-    alert.setTitle("Confirmation de suppression");
-    alert.setHeaderText("Supprimer : " + el.getName());
-    alert.setContentText(
-        "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.");
-
-    // On attend la réponse de l'utilisateur
-    alert
-        .showAndWait()
-        .ifPresent(
-            response -> {
-              if (response == ButtonType.OK) {
-                onConfirm.run(); // Exécute la suppression si on clique sur OK
-              }
-            });
+    this.historyManager = historyManager;
   }
 
   public void showAddDialog(Stage owner, String currentDirectoryId, Runnable onComplete) {
@@ -59,6 +43,8 @@ public class DialogHelper {
         .showAndWait()
         .ifPresent(
             choice -> {
+              String newId = UUID.randomUUID().toString().substring(0, 8);
+
               if ("Dossier".equals(choice)) {
                 TextInputDialog textDialog = new TextInputDialog("Nouveau Dossier");
                 textDialog.initOwner(owner);
@@ -68,11 +54,14 @@ public class DialogHelper {
                     .ifPresent(
                         name -> {
                           if (!name.trim().isEmpty()) {
-                            repository.insertElement(
-                                name.trim(),
-                                "Dossier",
-                                "/virtual/" + name.trim(),
-                                currentDirectoryId);
+                            historyManager.executeAction(
+                                historyManager
+                                .new CreateCommand(
+                                    newId,
+                                    name.trim(),
+                                    "Dossier",
+                                    "/virtual/" + name.trim(),
+                                    currentDirectoryId));
                           }
                         });
 
@@ -80,8 +69,14 @@ public class DialogHelper {
                 FileChooser fileChooser = new FileChooser();
                 File file = fileChooser.showOpenDialog(owner);
                 if (file != null) {
-                  repository.insertElement(
-                      file.getName(), "Fichier", file.getAbsolutePath(), currentDirectoryId);
+                  historyManager.executeAction(
+                      historyManager
+                      .new CreateCommand(
+                          newId,
+                          file.getName(),
+                          "Fichier",
+                          file.getAbsolutePath(),
+                          currentDirectoryId));
                 }
 
               } else if ("Texte".equals(choice)) {
@@ -117,12 +112,15 @@ public class DialogHelper {
                             String title = nameField.getText().trim();
                             String content = contentField.getText().trim();
                             if (!title.isEmpty() && !content.isEmpty()) {
-                              repository.insertElement(title, "Texte", content, currentDirectoryId);
+                              historyManager.executeAction(
+                                  historyManager
+                                  .new CreateCommand(
+                                      newId, title, "Texte", content, currentDirectoryId));
                             }
                           }
                         });
               }
-              onComplete.run(); // Rafraîchit le menu après l'action
+              onComplete.run();
             });
   }
 
@@ -143,6 +141,9 @@ public class DialogHelper {
     TextField nameField = new TextField(el.getName());
     TextField pathField = new TextField(el.getPath());
 
+    // NOUVEAU : Récupération dynamique des tags existants
+    TextField tagsField = new TextField(repository.getElementTagsAsString(el.getId()));
+
     grid.add(new Label("Nom :"), 0, 0);
     grid.add(nameField, 1, 0);
 
@@ -152,6 +153,9 @@ public class DialogHelper {
       grid.add(new Label("Emplacement :"), 0, 1);
     }
     grid.add(pathField, 1, 1);
+
+    grid.add(new Label("Tags (séparés par ,) :"), 0, 2);
+    grid.add(tagsField, 1, 2);
 
     dialog.getDialogPane().setContent(grid);
 
@@ -163,19 +167,42 @@ public class DialogHelper {
                 String newName = nameField.getText().trim();
                 String newPath = pathField.getText().trim();
 
-                if (newName.isEmpty() || ("Texte".equals(el.getType()) && newPath.isEmpty())) {
+                if (newName.isEmpty() || ("Texte".equals(el.getType()) && newPath.isEmpty()))
                   return;
-                }
 
                 File targetFile = new File(el.getId());
                 if (targetFile.exists() && targetFile.isAbsolute()) {
                   File newFile = new File(targetFile.getParent(), newName);
                   targetFile.renameTo(newFile);
                 } else {
-                  repository.updateElement(el.getId(), newName, newPath);
+                  // On passe par l'historique pour le renommage en DB
+                  historyManager.executeAction(
+                      historyManager
+                      .new RenameCommand(
+                          el.getId(), el.getName(), el.getPath(), newName, newPath, el.getType()));
                 }
+
+                // Mise à jour des Tags
+                repository.updateElementTags(
+                    el.getId(), el.getName(), el.getType(), el.getPath(), tagsField.getText());
+
                 onComplete.run();
               }
+            });
+  }
+
+  public void showDeleteConfirmation(Stage owner, ExplorerElement el, Runnable onConfirm) {
+    Alert alert = new Alert(AlertType.CONFIRMATION);
+    alert.initOwner(owner);
+    alert.setTitle("Confirmation");
+    alert.setHeaderText("Supprimer : " + el.getName());
+    alert.setContentText("Êtes-vous sûr de vouloir supprimer cet élément ?");
+
+    alert
+        .showAndWait()
+        .ifPresent(
+            response -> {
+              if (response == ButtonType.OK) onConfirm.run();
             });
   }
 }
