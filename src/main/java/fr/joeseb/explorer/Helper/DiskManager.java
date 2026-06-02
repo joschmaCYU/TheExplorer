@@ -22,9 +22,10 @@ public class DiskManager {
       for (File file : files) {
         if (!file.isHidden()) {
           String type = file.isDirectory() ? "Dossier" : "Fichier";
+          String icon = file.isDirectory() ? "default_folder.png" : "default_file.png";
           elements.add(
               new ExplorerElement(
-                  file.getAbsolutePath(), file.getName(), type, file.getAbsolutePath()));
+                  file.getAbsolutePath(), file.getName(), type, file.getAbsolutePath(), icon));
         }
       }
     }
@@ -77,5 +78,26 @@ public class DiskManager {
     // On indique à Java que ce thread ne doit pas empêcher l'application de se fermer
     openThread.setDaemon(true);
     openThread.start();
+  }
+
+  public void launchApp(String execPath) {
+    System.out.println("[DEBUG] Lancement de l'application : " + execPath);
+    new Thread(
+            () -> {
+              try {
+                // On lance l'exécutable directement
+                ProcessBuilder pb = new ProcessBuilder(execPath);
+
+                // On détache les flux pour ne pas figer l'explorateur Java
+                pb.redirectErrorStream(true);
+                pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                pb.start();
+
+              } catch (Exception e) {
+                System.err.println(
+                    "[DEBUG ERROR] Impossible de lancer l'application : " + e.getMessage());
+              }
+            })
+        .start();
   }
 }

@@ -1,4 +1,5 @@
 # TheExplorer
+TheExplorer est une interface de navigation radiale focalisée sur l'efficacité d'accès. Conçu comme une surcouche hybride, il lie le système de fichiers physique à une base de données relationnelle pour étendre les capacités de l'environnement de travail.
 
 ## Installation
 ```
@@ -15,20 +16,13 @@ cd TheExplorer
 mvn clean compile javafx:run
 ```
 
-What could, should, might, don't do the file explorer ?
+## Fonctionnalités :
 
-What should happen when we click ? Drag ? Double click ? Clique droit ?
+- Navigation spatiale : Interface circulaire permettant un accès aux ressources basé sur la mémoire musculaire.
+- Hybridation des données : Coexistence transparente entre les répertoires de l'ordinateur et des éléments virtuels persistants.
+- Exécution d'applications : Création de raccourcis virtuels et lancement direct des exécutables externes.
+- Sauvegarde textuelle : Création de mémos et copie instantanée de leur contenu dans le presse-papiers.
+- Catégorisation : Système de tags permettant l'étiquetage et le regroupement transversal des fichiers et dossiers.
+- Contrôle d'état : Traçabilité des modifications avec gestion native de l'annulation et de la répétition des actions.
+- Gestion continue : Ajout, édition des chemins, renommage et suppression directement depuis l'interface, sans perte de focus.
 
-Je veux que tu puisses créer des dossier et fichier.
-Clique : ouverture du fichier/copie du texte. ✅
-Drag: fichier drap and drop classique, text permet de le coller qlq part. ✅
-Case vide : Drag dans la roue: ajout de l'élément (text, fichier, application) ✅
-Appue sur touche + ajout élément/dossier, - pour suprimer, * pour modifier ✅
-
-
-TODO:
-- Change space key
-- pouvoir ajouter des tag, les afficher
-- ajouter des app
-- pouvoir undo redo action (historique)
-- pouvoir voir plus d'info (date, permission, utilisateur...)

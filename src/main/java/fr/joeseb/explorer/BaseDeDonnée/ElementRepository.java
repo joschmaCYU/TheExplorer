@@ -51,10 +51,14 @@ public class ElementRepository {
     List<ExplorerElement> elements = new ArrayList<>();
     String sql =
         (parentId == null)
-            ? "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE"
-                + " id_parent IS NULL ORDER BY date_creation"
-            : "SELECT id_element, nom_element, type_element, emplacement FROM Element WHERE"
-                + " id_parent = ? ORDER BY date_creation";
+            ? "SELECT e.id_element, e.nom_element, e.type_element, e.emplacement, COALESCE(d.icone,"
+                + " f.icone, 'default.png') AS icone FROM Element e LEFT JOIN Dossier d ON"
+                + " e.id_element = d.id_element LEFT JOIN Fichier f ON e.id_element ="
+                + " f.id_element WHERE e.id_parent IS NULL ORDER BY e.date_creation"
+            : "SELECT e.id_element, e.nom_element, e.type_element, e.emplacement, COALESCE(d.icone,"
+                + " f.icone, 'default.png') AS icone FROM Element e LEFT JOIN Dossier d ON"
+                + " e.id_element = d.id_element LEFT JOIN Fichier f ON e.id_element ="
+                + " f.id_element WHERE e.id_parent = ? ORDER BY e.date_creation";
 
     try (PreparedStatement pstmt = Database.getConnection().prepareStatement(sql)) {
       if (parentId != null) pstmt.setString(1, parentId);
@@ -72,7 +76,8 @@ public class ElementRepository {
                   rs.getString("id_element"),
                   rs.getString("nom_element"),
                   rs.getString("type_element"),
-                  rawPath));
+                  rawPath,
+                  rs.getString("icone")));
         }
       }
     } catch (Exception e) {
@@ -223,13 +228,18 @@ public class ElementRepository {
 
   public List<ExplorerElement> getAllTags() {
     List<ExplorerElement> elements = new ArrayList<>();
-    String sql = "SELECT id_tag, nom_tag FROM Tag ORDER BY nom_tag";
+    String sql = "SELECT id_tag, nom_tag, icone_tag FROM Tag ORDER BY nom_tag";
     try (PreparedStatement pt = Database.getConnection().prepareStatement(sql);
         ResultSet rs = pt.executeQuery()) {
       while (rs.next()) {
         // On transforme virtuellement le Tag en ExplorerElement pour l'afficher dans la roue
         elements.add(
-            new ExplorerElement(rs.getString("id_tag"), rs.getString("nom_tag"), "Tag", ""));
+            new ExplorerElement(
+                rs.getString("id_tag"),
+                rs.getString("nom_tag"),
+                "Tag",
+                "",
+                rs.getString("icone_tag")));
       }
     } catch (Exception e) {
       System.err.println("Erreur lecture Tags : " + e.getMessage());
@@ -260,7 +270,8 @@ public class ElementRepository {
                   rs.getString("id_element"),
                   rs.getString("nom_element"),
                   rs.getString("type_element"),
-                  rawPath));
+                  rawPath,
+                  rs.getString("icone")));
         }
       }
     } catch (Exception e) {
@@ -310,5 +321,89 @@ public class ElementRepository {
     } catch (Exception e) {
       System.err.println("Erreur modification Tag : " + e.getMessage());
     }
+  }
+
+  public String getAppExecPath(String elementId) {
+    String sql =
+        "SELECT a.chemin_exec FROM Dossier d JOIN Application a ON d.id_app = a.id_app WHERE"
+            + " d.id_element = ?";
+    try (PreparedStatement pt = Database.getConnection().prepareStatement(sql)) {
+      pt.setString(1, elementId);
+      try (ResultSet rs = pt.executeQuery()) {
+        if (rs.next()) {
+          return rs.getString("chemin_exec"); // Retourne le chemin (ex: C:\...\code.exe)
+        }
+      }
+    } catch (Exception e) {
+      System.err.println("Erreur lecture chemin application : " + e.getMessage());
+    }
+    return null; // Si ce n'est pas une app, on retourne null
+  }
+
+  public void insertApplication(String appId, String name, String execPath) {
+    String sql =
+        "INSERT INTO Application (id_app, nom_app, chemin_exec, version_app) VALUES (?, ?, ?,"
+            + " '1.0') ON CONFLICT DO NOTHING";
+    try (PreparedStatement pt = Database.getConnection().prepareStatement(sql)) {
+      pt.setString(1, appId);
+      pt.setString(2, name);
+      pt.setString(3, execPath);
+      pt.executeUpdate();
+    } catch (Exception e) {
+      System.err.println("Erreur création App : " + e.getMessage());
+    }
+  }
+
+  public void insertAppShortcut(
+      String elementId, String name, String parentId, String appId, String ownerId) {
+    // 1. On crée l'élément virtuel (type 'Dossier')
+    String sql1 =
+        "INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_proprietaire,"
+            + " id_parent) VALUES (?, ?, 'Dossier', '/app_shortcut', ?, ?)";
+    try (PreparedStatement pt = Database.getConnection().prepareStatement(sql1)) {
+      pt.setString(1, elementId);
+      pt.setString(2, name);
+      pt.setString(3, ownerId);
+      pt.setString(4, parentId);
+      pt.executeUpdate();
+    } catch (Exception e) {
+      System.err.println("Erreur création raccourci App : " + e.getMessage());
+    }
+
+    // 2. On le lie à l'application dans la table Dossier avec une icône par défaut
+    String sql2 =
+        "INSERT INTO Dossier (id_element, icone, id_app) VALUES (?, 'folder_apps.png', ?)";
+    try (PreparedStatement pt = Database.getConnection().prepareStatement(sql2)) {
+      pt.setString(1, elementId);
+      pt.setString(2, appId);
+      pt.executeUpdate();
+    } catch (Exception e) {
+      System.err.println("Erreur liaison Dossier-App : " + e.getMessage());
+    }
+  }
+
+  public String getElementDetails(String id) {
+    String sql =
+        "SELECT e.date_creation, e.date_modification, "
+            + "u.nom || ' ' || u.prenom AS proprietaire "
+            + "FROM Element e "
+            + "JOIN Utilisateur u ON e.id_proprietaire = u.id_user "
+            + "WHERE e.id_element = ?";
+    StringBuilder sb = new StringBuilder();
+    try (PreparedStatement pt = Database.getConnection().prepareStatement(sql)) {
+      pt.setString(1, id);
+      try (ResultSet rs = pt.executeQuery()) {
+        if (rs.next()) {
+          sb.append("Date de création : ").append(rs.getDate("date_creation")).append("\n");
+          sb.append("Dernière modification : ")
+              .append(rs.getDate("date_modification"))
+              .append("\n");
+          sb.append("Propriétaire : ").append(rs.getString("proprietaire")).append("\n");
+        }
+      }
+    } catch (Exception e) {
+      System.err.println("Erreur détails : " + e.getMessage());
+    }
+    return sb.toString();
   }
 }

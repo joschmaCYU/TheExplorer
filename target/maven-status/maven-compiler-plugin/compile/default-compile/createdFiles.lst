@@ -5,6 +5,7 @@ fr/joeseb/explorer/RadialMenu.class
 fr/joeseb/explorer/DatabaseInitializer.class
 fr/joeseb/explorer/HistoryManager$CreateCommand.class
 fr/joeseb/explorer/MenuListener.class
+fr/joeseb/explorer/HistoryManager$CreateAppCommand.class
 fr/joeseb/explorer/ExplorerElement.class
 fr/joeseb/explorer/HistoryManager.class
 fr/joeseb/explorer/GlobalKeyListener.class

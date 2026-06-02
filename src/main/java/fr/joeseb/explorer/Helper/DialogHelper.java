@@ -34,6 +34,7 @@ public class DialogHelper {
     choices.add("Dossier");
     choices.add("Fichier");
     choices.add("Texte");
+    choices.add("Application");
 
     ChoiceDialog<String> dialog = new ChoiceDialog<>("Fichier", choices);
     dialog.initOwner(owner);
@@ -119,6 +120,41 @@ public class DialogHelper {
                             }
                           }
                         });
+              } else if ("Application".equals(choice)) {
+                // 1. On demande à l'utilisateur de pointer vers l'exécutable (.exe, .sh,
+                // binaire...)
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("Sélectionner l'exécutable de l'application");
+                File file = fileChooser.showOpenDialog(owner);
+
+                if (file != null) {
+                  // 2. On lui demande comment il veut appeler ce raccourci (on pré-remplit avec le
+                  // nom du fichier)
+                  String defaultName = file.getName().replace(".exe", "");
+                  TextInputDialog nameDialog = new TextInputDialog(defaultName);
+                  nameDialog.initOwner(owner);
+                  nameDialog.setHeaderText("Nom de l'application :");
+
+                  nameDialog
+                      .showAndWait()
+                      .ifPresent(
+                          name -> {
+                            if (!name.trim().isEmpty()) {
+                              // 3. On génère un ID d'application et on l'envoie à l'historique
+                              String appId =
+                                  "APP_"
+                                      + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
+                              historyManager.executeAction(
+                                  historyManager
+                                  .new CreateAppCommand(
+                                      newId,
+                                      name.trim(),
+                                      appId,
+                                      file.getAbsolutePath(),
+                                      currentDirectoryId));
+                            }
+                          });
+                }
               }
               onComplete.run();
             });
@@ -204,5 +240,36 @@ public class DialogHelper {
             response -> {
               if (response == ButtonType.OK) onConfirm.run();
             });
+  }
+
+  public void showProperties(Stage owner, ExplorerElement el) {
+    Alert alert = new Alert(AlertType.INFORMATION);
+    alert.initOwner(owner);
+    alert.setTitle("Propriétés");
+    alert.setHeaderText(el.getName() + " (" + el.getType() + ")");
+
+    StringBuilder details = new StringBuilder();
+    details.append("Emplacement : ").append(el.getPath()).append("\n\n");
+
+    File f = new File(el.getPath());
+    if (f.exists() && f.isAbsolute()) {
+      details.append("--- Fichier Système ---\n");
+      long sizeKo = f.length() / 1024;
+      details.append("Taille : ").append(sizeKo > 0 ? sizeKo : 1).append(" Ko\n");
+      details.append("Lecture autorisée : ").append(f.canRead() ? "Oui" : "Non").append("\n");
+      details.append("Écriture autorisée : ").append(f.canWrite() ? "Oui" : "Non").append("\n");
+      details.append("Exécution autorisée : ").append(f.canExecute() ? "Oui" : "Non").append("\n");
+      details.append("Modifié le : ").append(new java.util.Date(f.lastModified())).append("\n");
+    } else {
+      details.append("--- Élément Virtuel ---\n");
+      details.append(repository.getElementDetails(el.getId()));
+      String tags = repository.getElementTagsAsString(el.getId());
+      if (!tags.isEmpty()) {
+        details.append("Tags : ").append(tags).append("\n");
+      }
+    }
+
+    alert.setContentText(details.toString());
+    alert.showAndWait();
   }
 }

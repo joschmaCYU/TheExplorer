@@ -59,7 +59,14 @@ public class Explorer extends Application {
         new MenuListener() {
           @Override
           public void onElementSelected(ExplorerElement element) {
-            if ("Dossier".equalsIgnoreCase(element.getType())
+            String execPath = repository.getAppExecPath(element.getId());
+
+            if (execPath != null) {
+              // C'est une application : on la lance
+              diskManager.launchApp(execPath);
+              primaryStage.hide();
+
+            } else if ("Dossier".equalsIgnoreCase(element.getType())
                 || "Tag".equalsIgnoreCase(element.getType())) {
               navigateTo(element);
             } else if ("Texte".equalsIgnoreCase(element.getType())) {
@@ -98,22 +105,26 @@ public class Explorer extends Application {
     primaryStage.setAlwaysOnTop(true);
     Platform.setImplicitExit(false);
 
-    System.out.println("Explorateur pret pour l'utilisateur : " + currentUser);
+    System.out.println(
+        "Appuiez sur espace pour lancer le navigateur et utiliser votre pavé numérique");
   }
 
   private VBox layoutUI(Stage primaryStage) {
     Button btnAdd = new Button("+");
     Button btnEdit = new Button("*");
     Button btnRemove = new Button("-");
+    Button btnInfo = new Button("/");
 
     btnAdd.setFocusTraversable(false);
     btnEdit.setFocusTraversable(false);
     btnRemove.setFocusTraversable(false);
+    btnInfo.setFocusTraversable(false);
 
     btnAdd.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;");
     btnEdit.setStyle("-fx-background-color: #ff6f00; -fx-text-fill: white; -fx-font-weight: bold;");
     btnRemove.setStyle(
         "-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;");
+    btnInfo.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold;");
 
     btnAdd.setOnAction(
         e -> dialogHelper.showAddDialog(primaryStage, getCurrentDirId(), this::updateMenu));
@@ -125,7 +136,13 @@ public class Explorer extends Application {
         });
     btnRemove.setOnAction(e -> handleDelete(primaryStage));
 
-    HBox btnBox = new HBox(10, btnAdd, btnEdit, btnRemove);
+    btnInfo.setOnAction(
+        e -> {
+          ExplorerElement elInfo = menu.getHighlightedElement();
+          if (elInfo != null) dialogHelper.showProperties(primaryStage, elInfo);
+        });
+
+    HBox btnBox = new HBox(10, btnAdd, btnEdit, btnRemove, btnInfo);
     btnBox.setAlignment(Pos.CENTER);
     btnBox.setPadding(new Insets(10));
     btnBox.setId("btnBox");
@@ -265,6 +282,11 @@ public class Explorer extends Application {
             case SUBTRACT:
             case MINUS:
               handleDelete(primaryStage);
+              break;
+            case SLASH:
+            case DIVIDE:
+              ExplorerElement elInfo = menu.getHighlightedElement();
+              if (elInfo != null) dialogHelper.showProperties(primaryStage, elInfo);
               break;
           }
         });

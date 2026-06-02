@@ -114,7 +114,6 @@ ON CONFLICT (id_user, id_groupe) DO NOTHING;
 
 INSERT INTO Application (id_app, nom_app, chemin_exec, version_app) VALUES 
 ('APP_VLC', 'VLC Player', 'C:\Program Files\VLC\vlc.exe', 'v3.0.20'),
-('APP_VISIO', 'Visionneuse', 'C:\Program Files\Images\vis.exe', 'v1.2'),
 ('APP_VSCODE', 'VS Code', 'C:\Program Files\Microsoft VS Code\code.exe', 'v1.88')
 ON CONFLICT (id_app) DO NOTHING;
 
@@ -136,7 +135,8 @@ ON CONFLICT (id_element) DO NOTHING;
 INSERT INTO Dossier (id_element, icone, id_app, nb_elements) VALUES 
 ('E_FICHIER', 'folder_home.png', NULL, 2),
 ('E_DOSSIER_APPS', 'folder_apps.png', NULL, NULL),
-('E_VSCODE_LINK', 'icone_vscode.png', 'APP_VSCODE', NULL)
+('E_VSCODE_LINK', 'icone_vscode.png', 'APP_VSCODE', NULL),
+('E_VLC_LINK', 'icone_vlc.png', 'APP_VLC', NULL)
 ON CONFLICT (id_element) DO NOTHING;
 
 INSERT INTO Element_Tag (id_element, id_tag) VALUES 

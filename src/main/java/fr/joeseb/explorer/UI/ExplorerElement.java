@@ -1,19 +1,21 @@
 package fr.joeseb.explorer;
 
 public class ExplorerElement {
-  private final String id;
-  private final String name;
-  private final String type;
+  private String id;
+  private String name;
+  private String type;
+  private String path;
+  private String icon;
 
-  private final String path;
-
-  public ExplorerElement(String id, String name, String type, String path) {
+  public ExplorerElement(String id, String name, String type, String path, String icon) {
     this.id = id;
     this.name = name;
     this.type = type;
     this.path = path;
+    this.icon = icon;
   }
 
+  // Getters
   public String getId() {
     return id;
   }
@@ -30,8 +32,7 @@ public class ExplorerElement {
     return path;
   }
 
-  @Override
-  public String toString() {
-    return name;
+  public String getIcon() {
+    return icon;
   }
 }

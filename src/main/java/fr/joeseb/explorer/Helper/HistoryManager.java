@@ -67,6 +67,35 @@ public class HistoryManager {
     }
   }
 
+  public class CreateAppCommand implements Command {
+    private final String id, name, appId, execPath, parentId;
+
+    public CreateAppCommand(
+        String id, String name, String appId, String execPath, String parentId) {
+      this.id = id;
+      this.name = name;
+      this.appId = appId;
+      this.execPath = execPath;
+      this.parentId = parentId;
+    }
+
+    @Override
+    public void execute() {
+      // On enregistre d'abord l'application, puis le raccourci
+      repo.insertApplication(appId, name, execPath);
+      repo.insertAppShortcut(id, name, parentId, appId, currentUser);
+      repo.logHistory("Création", id, currentUser);
+    }
+
+    @Override
+    public void undo() {
+      // La suppression en cascade (ON DELETE CASCADE) détruira automatiquement
+      // la ligne dans la table Dossier et Element_Tag
+      repo.deleteElement(id);
+      repo.logHistory("Suppression", id, currentUser);
+    }
+  }
+
   public class RenameCommand implements Command {
     private final String id, oldName, oldPath, newName, newPath, type;
 

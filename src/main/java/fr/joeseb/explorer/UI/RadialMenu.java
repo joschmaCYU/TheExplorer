@@ -119,17 +119,51 @@ public class RadialMenu extends Pane {
         text.setTextAlignment(TextAlignment.CENTER);
         text.setTextOrigin(VPos.CENTER);
         text.setMouseTransparent(true);
-        this.getChildren().add(text);
 
         double middleAngle = Math.toRadians(startAngle + anglePerSlice / 2);
         double textRadius = (RADIUS + (CENTER_RADIUS + 30)) / 2;
 
-        double tx =
-            200 + textRadius * Math.cos(middleAngle) - (text.getLayoutBounds().getWidth() / 2);
+        double tx = 200 + textRadius * Math.cos(middleAngle);
         double ty = 200 + textRadius * Math.sin(middleAngle);
 
-        text.setX(tx);
-        text.setY(ty);
+        // --- DESSIN DE L'ICÔNE ---
+        String iconName = currentElements.get(i).getIcon();
+        boolean hasIcon = false;
+
+        if (iconName != null && !iconName.isEmpty()) {
+          try {
+            // On vérifie que le fichier existe bien avant de le dessiner
+            java.io.InputStream stream = getClass().getResourceAsStream("/icons/" + iconName);
+            if (stream != null) {
+              javafx.scene.image.Image img = new javafx.scene.image.Image(stream);
+              javafx.scene.image.ImageView iconView = new javafx.scene.image.ImageView(img);
+              iconView.setFitWidth(24);
+              iconView.setFitHeight(24);
+              iconView.setMouseTransparent(true);
+
+              // On centre l'icône et on la remonte un peu
+              iconView.setX(tx - 12);
+              iconView.setY(ty - 22);
+              this.getChildren().add(iconView);
+              hasIcon = true;
+            }
+          } catch (Exception e) {
+            System.err.println("Icône introuvable : " + iconName);
+          }
+        }
+
+        // --- DESSIN DU TEXTE ---
+        text.setX(tx - (text.getLayoutBounds().getWidth() / 2));
+
+        // Si l'icône est présente, on descend le texte pour faire de la place.
+        // Sinon, on le place parfaitement au centre (tx, ty).
+        if (hasIcon) {
+          text.setY(ty + 16);
+        } else {
+          text.setY(ty);
+        }
+
+        this.getChildren().add(text);
       }
     }
 
