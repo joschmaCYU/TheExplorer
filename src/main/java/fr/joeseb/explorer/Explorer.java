@@ -46,7 +46,6 @@ public class Explorer extends Application {
 
     repository = new ElementRepository();
 
-    // NOUVEAU : Récupère l'utilisateur OS et initialise l'historique
     String currentUser = repository.syncSystemUser();
     historyManager = new HistoryManager(repository, currentUser);
 
@@ -106,7 +105,7 @@ public class Explorer extends Application {
     Platform.setImplicitExit(false);
 
     System.out.println(
-        "Appuiez sur espace pour lancer le navigateur et utiliser votre pavé numérique");
+        "Appuiez sur windows + espace pour lancer le navigateur et utiliser votre pavé numérique");
   }
 
   private VBox layoutUI(Stage primaryStage) {

@@ -250,10 +250,14 @@ public class ElementRepository {
   // 2. Récupère tous les éléments (fichiers/dossiers) liés à un tag précis
   public List<ExplorerElement> getElementsByTag(String tagId) {
     List<ExplorerElement> elements = new ArrayList<>();
+
     String sql =
-        "SELECT e.id_element, e.nom_element, e.type_element, e.emplacement "
-            + "FROM Element e JOIN Element_Tag et ON e.id_element = et.id_element "
-            + "WHERE et.id_tag = ? ORDER BY e.nom_element";
+        "SELECT e.id_element, e.nom_element, e.type_element, e.emplacement, COALESCE(d.icone,"
+            + " f.icone, 'default.png') AS icone FROM Element e JOIN Element_Tag et ON e.id_element"
+            + " = et.id_element LEFT JOIN Dossier d ON e.id_element = d.id_element LEFT JOIN"
+            + " Fichier f ON e.id_element = f.id_element WHERE et.id_tag = ? ORDER BY"
+            + " e.nom_element";
+
     try (PreparedStatement pt = Database.getConnection().prepareStatement(sql)) {
       pt.setString(1, tagId);
       try (ResultSet rs = pt.executeQuery()) {
@@ -263,8 +267,9 @@ public class ElementRepository {
             rawPath =
                 rawPath
                     .replace("<HOME>", System.getProperty("user.home"))
-                    .replace("/", File.separator);
+                    .replace("/", java.io.File.separator);
           }
+
           elements.add(
               new ExplorerElement(
                   rs.getString("id_element"),

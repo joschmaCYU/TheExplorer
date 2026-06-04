@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS Element (
     est_cache BOOLEAN DEFAULT FALSE NOT NULL,
     emplacement VARCHAR NOT NULL,
     id_proprietaire VARCHAR REFERENCES Utilisateur(id_user) NOT NULL,
-    id_parent VARCHAR REFERENCES Element(id_element)
+    id_parent VARCHAR REFERENCES Element(id_element) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS Fichier (

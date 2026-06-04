@@ -7,31 +7,37 @@ import javafx.stage.Stage;
 
 public class GlobalKeyListener implements NativeKeyListener {
 
-  private final Stage stage;
+  private final Stage primaryStage;
 
-  public GlobalKeyListener(Stage stage) {
-    this.stage = stage;
+  public GlobalKeyListener(Stage primaryStage) {
+    this.primaryStage = primaryStage;
   }
 
   @Override
   public void nativeKeyPressed(NativeKeyEvent e) {
-    // Détection de la touche "Espace" (Code 57)
-    // Vous pouvez combiner avec NativeKeyEvent.VC_ALT etc.
-    if (e.getKeyCode() == NativeKeyEvent.VC_SPACE) {
+    // Détecte la touche Windows Gauche ou Windows Droite
+    if (e.getKeyCode() == NativeKeyEvent.VC_SPACE
+        && (e.getModifiers() & NativeKeyEvent.META_MASK) != 0) {
 
-      // JavaFX exige que les modifications de fenêtre soient sur son "Thread"
+      // JNativeHook tourne dans un thread séparé, on doit utiliser Platform.runLater
+      // pour modifier l'interface JavaFX sans créer de crash.
       Platform.runLater(
           () -> {
-            if (stage.isShowing()) {
-              stage.hide();
-              System.out.println("Roue cachée.");
+            if (primaryStage.isShowing()) {
+              primaryStage.hide();
             } else {
-              // Optionnel : Placer la fenêtre sous la souris de l'utilisateur
-              stage.show();
-              stage.toFront();
-              System.out.println("Roue affichée !");
+              primaryStage.show();
+              primaryStage.requestFocus();
             }
           });
+
+      // Optionnel : Tente de bloquer l'événement pour empêcher le système d'exploitation
+      // d'ouvrir le menu Démarrer en même temps (dépend de l'OS et des permissions).
+      try {
+        // e.consume(); // Décommentez cette ligne si vous utilisez JNativeHook v2.2+
+      } catch (Exception ex) {
+        // Ignoré
+      }
     }
   }
 }

@@ -16,6 +16,9 @@ cd TheExplorer
 mvn clean compile javafx:run
 ```
 
+## PSQL
+psql -h postgresql-explorer.alwaysdata.net -U explorer -d explorer_explorer
+
 ## Fonctionnalités :
 
 - Navigation spatiale : Interface circulaire permettant un accès aux ressources basé sur la mémoire musculaire.
