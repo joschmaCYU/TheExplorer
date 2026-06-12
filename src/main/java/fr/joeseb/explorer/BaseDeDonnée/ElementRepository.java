@@ -154,7 +154,7 @@ public class ElementRepository {
       String elementPath,
       String tagsString) {
     try {
-      // 0. SÉCURITÉ CRITIQUE : On s'assure que l'élément existe dans la base de données
+      // SÉCURITÉ CRITIQUE : On s'assure que l'élément existe dans la base de données
       // S'il s'agit d'un vrai fichier physique, il sera enregistré ici pour respecter la clé
       // étrangère.
       String sqlEnsure =
@@ -168,7 +168,7 @@ public class ElementRepository {
         p.executeUpdate();
       }
 
-      // 1. On nettoie les anciens tags pour cet élément
+      // On nettoie les anciens tags pour cet élément
       try (PreparedStatement pstmt =
           Database.getConnection()
               .prepareStatement("DELETE FROM Element_Tag WHERE id_element = ?")) {
@@ -177,7 +177,7 @@ public class ElementRepository {
       }
       if (tagsString == null || tagsString.trim().isEmpty()) return;
 
-      // 2. On traite chaque nouveau tag
+      // On traite chaque nouveau tag
       String[] tags = tagsString.split(",");
       for (String tag : tags) {
         String tagName = tag.trim();
@@ -207,8 +207,6 @@ public class ElementRepository {
       System.err.println("Erreur Tag : " + e.getMessage());
     }
   }
-
-  // --- GESTION DE L'HISTORIQUE ---
 
   public void logHistory(String actionType, String elementId, String userId) {
     // Note : le ::enum_action est vital pour forcer le typage dans PostgreSQL
@@ -247,7 +245,7 @@ public class ElementRepository {
     return elements;
   }
 
-  // 2. Récupère tous les éléments (fichiers/dossiers) liés à un tag précis
+  // Récupère tous les éléments (fichiers/dossiers) liés à un tag précis
   public List<ExplorerElement> getElementsByTag(String tagId) {
     List<ExplorerElement> elements = new ArrayList<>();
 
@@ -287,13 +285,13 @@ public class ElementRepository {
 
   public void deleteTag(String tagId) {
     try {
-      // 1. On supprime le Tag de TOUS les fichiers qui le possèdent
+      // On supprime le Tag de TOUS les fichiers qui le possèdent
       try (PreparedStatement p =
           Database.getConnection().prepareStatement("DELETE FROM Element_Tag WHERE id_tag = ?")) {
         p.setString(1, tagId);
         p.executeUpdate();
       }
-      // 2. On supprime le Tag lui-même
+      // On supprime le Tag lui-même
       try (PreparedStatement p =
           Database.getConnection().prepareStatement("DELETE FROM Tag WHERE id_tag = ?")) {
         p.setString(1, tagId);
@@ -361,7 +359,7 @@ public class ElementRepository {
 
   public void insertAppShortcut(
       String elementId, String name, String parentId, String appId, String ownerId) {
-    // 1. On crée l'élément virtuel (type 'Dossier')
+    // On crée l'élément virtuel (type 'Dossier')
     String sql1 =
         "INSERT INTO Element (id_element, nom_element, type_element, emplacement, id_proprietaire,"
             + " id_parent) VALUES (?, ?, 'Dossier', '/app_shortcut', ?, ?)";
@@ -375,7 +373,7 @@ public class ElementRepository {
       System.err.println("Erreur création raccourci App : " + e.getMessage());
     }
 
-    // 2. On le lie à l'application dans la table Dossier avec une icône par défaut
+    // On le lie à l'application dans la table Dossier avec une icône par défaut
     String sql2 =
         "INSERT INTO Dossier (id_element, icone, id_app) VALUES (?, 'folder_apps.png', ?)";
     try (PreparedStatement pt = Database.getConnection().prepareStatement(sql2)) {

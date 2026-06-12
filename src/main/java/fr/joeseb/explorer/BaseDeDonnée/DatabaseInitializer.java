@@ -16,7 +16,7 @@ public class DatabaseInitializer {
       executeSqlScript(conn, "schema.sql");
       System.out.println("Vérification et application du schéma SQL réussies.");
 
-      // Note : L'utilisateur et les tags sont maintenant gérés de façon dynamique
+      // L'utilisateur et les tags sont gérés de façon dynamique
       // par ElementRepository lors du lancement et de la modification !
 
     } catch (Exception e) {

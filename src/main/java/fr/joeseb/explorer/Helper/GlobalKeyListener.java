@@ -30,13 +30,6 @@ public class GlobalKeyListener implements NativeKeyListener {
               primaryStage.requestFocus();
             }
           });
-
-      // Optionnel : Tente de bloquer l'événement pour empêcher le système d'exploitation
-      // d'ouvrir le menu Démarrer en même temps (dépend de l'OS et des permissions).
-      try {
-        // e.consume(); // Décommentez cette ligne si vous utilisez JNativeHook v2.2+
-      } catch (Exception ex) {
-        // Ignoré
       }
     }
   }

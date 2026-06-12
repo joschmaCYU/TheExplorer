@@ -13,18 +13,18 @@ public class Database {
   public static Connection getConnection() {
     if (connection == null) {
       try {
-        // 1. On charge le fichier de configuration
+        // On charge le fichier de configuration
         Properties props = new Properties();
         try (InputStream input = new FileInputStream("db.properties")) {
           props.load(input);
         }
 
-        // 2. On récupère les valeurs
+        // On récupère les valeurs
         String url = props.getProperty("db.url");
         String user = props.getProperty("db.user");
         String password = props.getProperty("db.password");
 
-        // 3. On se connecte
+        // On se connecte
         connection = DriverManager.getConnection(url, user, password);
         System.out.println("Connexion à la base de données réussie !");
 

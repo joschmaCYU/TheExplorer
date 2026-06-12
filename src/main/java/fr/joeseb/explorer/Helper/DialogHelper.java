@@ -121,14 +121,14 @@ public class DialogHelper {
                           }
                         });
               } else if ("Application".equals(choice)) {
-                // 1. On demande à l'utilisateur de pointer vers l'exécutable (.exe, .sh,
+                // On demande à l'utilisateur de pointer vers l'exécutable (.exe, .sh,
                 // binaire...)
                 FileChooser fileChooser = new FileChooser();
                 fileChooser.setTitle("Sélectionner l'exécutable de l'application");
                 File file = fileChooser.showOpenDialog(owner);
 
                 if (file != null) {
-                  // 2. On lui demande comment il veut appeler ce raccourci (on pré-remplit avec le
+                  // On lui demande comment il veut appeler ce raccourci (on pré-remplit avec le
                   // nom du fichier)
                   String defaultName = file.getName().replace(".exe", "");
                   TextInputDialog nameDialog = new TextInputDialog(defaultName);
@@ -140,7 +140,7 @@ public class DialogHelper {
                       .ifPresent(
                           name -> {
                             if (!name.trim().isEmpty()) {
-                              // 3. On génère un ID d'application et on l'envoie à l'historique
+                              // On génère un ID d'application et on l'envoie à l'historique
                               String appId =
                                   "APP_"
                                       + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
@@ -177,7 +177,7 @@ public class DialogHelper {
     TextField nameField = new TextField(el.getName());
     TextField pathField = new TextField(el.getPath());
 
-    // NOUVEAU : Récupération dynamique des tags existants
+    // Récupération dynamique des tags existants
     TextField tagsField = new TextField(repository.getElementTagsAsString(el.getId()));
 
     grid.add(new Label("Nom :"), 0, 0);
