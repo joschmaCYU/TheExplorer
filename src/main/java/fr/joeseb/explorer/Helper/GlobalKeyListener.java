@@ -30,7 +30,6 @@ public class GlobalKeyListener implements NativeKeyListener {
               primaryStage.requestFocus();
             }
           });
-      }
     }
   }
 }

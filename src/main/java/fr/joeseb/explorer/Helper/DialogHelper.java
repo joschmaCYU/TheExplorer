@@ -30,6 +30,21 @@ public class DialogHelper {
   }
 
   public void showAddDialog(Stage owner, String currentDirectoryId, Runnable onComplete) {
+
+    if (repository.isTag(currentDirectoryId)) {
+      javafx.scene.control.Alert alert =
+          new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+      alert.initOwner(owner);
+      alert.setTitle("Action impossible");
+      alert.setHeaderText("Vous explorez actuellement un Tag");
+      alert.setContentText(
+          "Un Tag est un filtre de recherche, pas un vrai dossier physique.\n"
+              + "Veuillez retourner à la racine ou dans un vrai dossier pour créer un fichier"
+              + " texte.");
+      alert.showAndWait();
+      return; // CRUCIAL : On arrête la méthode ici, la base de données ne sera jamais contactée !
+    }
+
     List<String> choices = new ArrayList<>();
     choices.add("Dossier");
     choices.add("Fichier");

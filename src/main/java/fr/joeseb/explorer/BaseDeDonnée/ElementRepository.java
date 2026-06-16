@@ -409,4 +409,18 @@ public class ElementRepository {
     }
     return sb.toString();
   }
+
+  public boolean isTag(String id) {
+    if (id == null) return false;
+    String sql = "SELECT 1 FROM Tag WHERE id_tag = ?";
+    try (java.sql.PreparedStatement pt = Database.getConnection().prepareStatement(sql)) {
+      pt.setString(1, id);
+      try (java.sql.ResultSet rs = pt.executeQuery()) {
+        return rs.next(); // Retourne true si l'ID existe dans la table Tag
+      }
+    } catch (Exception e) {
+      System.err.println("Erreur vérification Tag : " + e.getMessage());
+      return false;
+    }
+  }
 }

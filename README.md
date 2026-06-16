@@ -10,6 +10,7 @@ mvn javafx:run
 ```
 
 OR
+
 ```
 git clone https://github.com/joschmaCYU/TheExplorer
 cd TheExplorer

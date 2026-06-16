@@ -23,8 +23,8 @@ import javafx.scene.text.TextAlignment;
 
 public class RadialMenu extends Pane {
 
-  private static final double RADIUS = 150;
-  private static final double CENTER_RADIUS = 55;
+  private static final double RADIUS = 185;
+  private static final double CENTER_RADIUS = 75;
   private static final int MAX_ITEMS_PER_PAGE = 8;
 
   private final List<Shape> slices = new ArrayList<>();
@@ -114,13 +114,28 @@ public class RadialMenu extends Pane {
         slices.add(slice);
         this.getChildren().add(slice);
 
-        Text text = new Text(currentElements.get(i).getName() + "\n(" + (i + 1) + ")");
+        String originalName = currentElements.get(i).getName();
+        double middleAngle = Math.toRadians(startAngle + anglePerSlice / 2);
+
+        // Calcul dynamique de la place disponible selon l'angle.
+        // absCos vaut 1 sur la gauche/droite (espace minimum) et 0 en haut/bas (espace maximum).
+        double absCos = Math.abs(Math.cos(middleAngle));
+
+        // Limites à ajuster manuellement selon la taille en pixels de ton interface
+        int minChars = 10; // Limite pour les cases latérales (restreint par l'épaisseur)
+        int maxChars = 22; // Limite pour les cases verticales (largeur de l'arc)
+
+        // Interpolation linéaire entre le minimum et le maximum
+        int dynamicMaxLength = (int) (minChars + (maxChars - minChars) * (1.0 - absCos));
+
+        String truncatedName = formatAppleStyle(originalName, dynamicMaxLength);
+
+        Text text = new Text(truncatedName + "\n(" + (i + 1) + ")");
         text.setFill(Color.WHITE);
         text.setTextAlignment(TextAlignment.CENTER);
         text.setTextOrigin(VPos.CENTER);
         text.setMouseTransparent(true);
 
-        double middleAngle = Math.toRadians(startAngle + anglePerSlice / 2);
         double textRadius = (RADIUS + (CENTER_RADIUS + 30)) / 2;
 
         double tx = 200 + textRadius * Math.cos(middleAngle);
@@ -212,7 +227,8 @@ public class RadialMenu extends Pane {
 
       double pIndW = pageIndicator.getLayoutBounds().getWidth();
       pageIndicator.setX(200 - (pIndW / 2));
-      pageIndicator.setY(hasMore ? 200 : 200 + (CENTER_RADIUS / 2) - 5);
+      // CORRECTION : On place l'indicateur à Y=212 (sous la ligne) au lieu de 200
+      pageIndicator.setY(hasMore ? 200 - 10 : 200 + (CENTER_RADIUS / 2) - 5);
     }
 
     if (hasMore) {
@@ -226,13 +242,13 @@ public class RadialMenu extends Pane {
       nextTxt.setFill(Color.WHITE);
       nextTxt.setTextAlignment(TextAlignment.CENTER);
       nextTxt.setTextOrigin(VPos.CENTER);
-      nextTxt.setFont(Font.font(10));
+      nextTxt.setFont(Font.font(12));
       nextTxt.setMouseTransparent(true);
       this.getChildren().add(nextTxt);
 
       double bNextW = nextTxt.getLayoutBounds().getWidth();
       nextTxt.setX(200 - (bNextW / 2));
-      nextTxt.setY(200 + (CENTER_RADIUS / 2) - 2);
+      nextTxt.setY(200 + (CENTER_RADIUS / 2));
     } else {
       nextButton = null;
     }
@@ -360,5 +376,16 @@ public class RadialMenu extends Pane {
       int actualIndex = (currentPage * MAX_ITEMS_PER_PAGE) + currentIndex;
       if (listener != null) listener.onElementSelected(allElements.get(actualIndex));
     }
+  }
+
+  private String formatAppleStyle(String text, int maxLength) {
+    if (text == null || text.length() <= maxLength) {
+      return text;
+    }
+    // On calcule combien de caractères garder au début et à la fin (en soustrayant les 3 points)
+    int keepFront = (maxLength - 3) / 2 + 1; // On privilégie un caractère de plus au début
+    int keepBack = (maxLength - 3) - keepFront;
+
+    return text.substring(0, keepFront) + "..." + text.substring(text.length() - keepBack);
   }
 }
